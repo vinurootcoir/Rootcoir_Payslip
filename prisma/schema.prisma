@@ -1,0 +1,305 @@
+// Money columns are NUMERIC, never floating point.
+// Scale and half-up rounding live in src/lib/money.ts.
+// NULL on an optional earning or deduction means "not applicable".
+// current_marker is filled by a database trigger so only one non-void
+// payroll row can exist for an employee in a period.
+// email_deliveries.status SENT means the SMTP server accepted the message.
+// audit_logs are append-only for application users.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  SEPARATED
+}
+
+enum PayrollPeriodStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum PayrollRecordStatus {
+  DRAFT
+  FINALIZED
+  VOID
+}
+
+enum EmailBatchStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+}
+
+enum EmailDeliveryStatus {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  RETRYING
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  role         UserRole
+  status       AccountStatus @default(ACTIVE)
+  employeeId   String?       @unique @map("employee_id") @db.Uuid
+  lastLoginAt  DateTime?     @map("last_login_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  employee         Employee?         @relation("UserEmployee", fields: [employeeId], references: [id], onDelete: Restrict)
+  sessions         Session[]
+  auditLogs        AuditLog[]
+  employeesCreated Employee[]        @relation("EmployeeCreatedBy")
+  employeesUpdated Employee[]        @relation("EmployeeUpdatedBy")
+  periodsCreated   PayrollPeriod[]   @relation("PeriodCreatedBy")
+  periodsFinalized PayrollPeriod[]   @relation("PeriodFinalizedBy")
+  recordsCreated   PayrollRecord[]   @relation("RecordCreatedBy")
+  recordsUpdated   PayrollRecord[]   @relation("RecordUpdatedBy")
+  recordsFinalized PayrollRecord[]   @relation("RecordFinalizedBy")
+  recordsVoided    PayrollRecord[]   @relation("RecordVoidedBy")
+  emailBatches     EmailBatch[]
+  companySettings  CompanySettings[] @relation("CompanyUpdatedBy")
+
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model Employee {
+  id             String           @id @default(uuid()) @db.Uuid
+  employeeNumber String           @unique @map("employee_number")
+  fullName       String           @map("full_name")
+  workEmail      String           @unique @map("work_email")
+  phone          String?
+  designation    String
+  department     String
+  dateOfJoining  DateTime         @map("date_of_joining") @db.Date
+  status         EmploymentStatus @default(ACTIVE)
+  pan            String?
+  uan            String?
+  esiNumber      String?          @map("esi_number")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  createdById    String?          @map("created_by_id") @db.Uuid
+  updatedById    String?          @map("updated_by_id") @db.Uuid
+
+  user           User?           @relation("UserEmployee")
+  createdBy      User?           @relation("EmployeeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User?           @relation("EmployeeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  payrollRecords PayrollRecord[]
+
+  @@index([status])
+  @@index([department])
+  @@map("employees")
+}
+
+model CompanySettings {
+  id                   Int      @id
+  name                 String   @default("")
+  address              String   @default("")
+  currency             String   @default("INR")
+  includeBonus         Boolean  @default(false) @map("include_bonus")
+  includeOvertime      Boolean  @default(false) @map("include_overtime")
+  emailSubjectTemplate String   @default("") @map("email_subject_template")
+  emailBodyTemplate    String   @default("") @map("email_body_template") @db.Text
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  updatedById          String?  @map("updated_by_id") @db.Uuid
+
+  updatedBy User? @relation("CompanyUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("company_settings")
+}
+
+model PayrollPeriod {
+  id            String              @id @default(uuid()) @db.Uuid
+  year          Int
+  month         Int
+  status        PayrollPeriodStatus @default(DRAFT)
+  createdById   String?             @map("created_by_id") @db.Uuid
+  finalizedById String?             @map("finalized_by_id") @db.Uuid
+  finalizedAt   DateTime?           @map("finalized_at")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  createdBy    User?           @relation("PeriodCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  finalizedBy  User?           @relation("PeriodFinalizedBy", fields: [finalizedById], references: [id], onDelete: SetNull)
+  records      PayrollRecord[]
+  emailBatches EmailBatch[]
+
+  @@unique([year, month])
+  @@index([status])
+  @@map("payroll_periods")
+}
+
+model PayrollRecord {
+  id              String              @id @default(uuid()) @db.Uuid
+  employeeId      String              @map("employee_id") @db.Uuid
+  payrollPeriodId String              @map("payroll_period_id") @db.Uuid
+  payslipNumber   String?             @unique @map("payslip_number")
+  revision        Int                 @default(1)
+  status          PayrollRecordStatus @default(DRAFT)
+  currentMarker   String?             @unique @map("current_marker")
+
+  totalWorkingDays Decimal @map("total_working_days") @db.Decimal(6, 2)
+  paidDays         Decimal @map("paid_days") @db.Decimal(6, 2)
+  lopDays          Decimal @map("lop_days") @db.Decimal(6, 2)
+
+  basicSalary      Decimal  @map("basic_salary") @db.Decimal(14, 2)
+  hra              Decimal  @db.Decimal(14, 2)
+  specialAllowance Decimal  @map("special_allowance") @db.Decimal(14, 2)
+  otherAllowances  Decimal  @default(0) @map("other_allowances") @db.Decimal(14, 2)
+  overtime         Decimal? @db.Decimal(14, 2)
+  bonus            Decimal? @db.Decimal(14, 2)
+  grossEarnings    Decimal  @map("gross_earnings") @db.Decimal(14, 2)
+
+  employeePf      Decimal? @map("employee_pf") @db.Decimal(14, 2)
+  employeeEsi     Decimal? @map("employee_esi") @db.Decimal(14, 2)
+  professionalTax Decimal? @map("professional_tax") @db.Decimal(14, 2)
+  tds             Decimal? @db.Decimal(14, 2)
+  salaryAdvance   Decimal? @map("salary_advance") @db.Decimal(14, 2)
+  otherDeductions Decimal? @map("other_deductions") @db.Decimal(14, 2)
+  totalDeductions Decimal  @map("total_deductions") @db.Decimal(14, 2)
+
+  netPay        Decimal @map("net_pay") @db.Decimal(14, 2)
+  amountInWords String? @map("amount_in_words")
+  snapshot      Json?
+  currency      String  @default("INR")
+
+  finalizedAt  DateTime? @map("finalized_at")
+  voidedAt     DateTime? @map("voided_at")
+  voidReason   String?   @map("void_reason") @db.VarChar(500)
+  supersedesId String?   @map("supersedes_id") @db.Uuid
+
+  createdById   String?  @map("created_by_id") @db.Uuid
+  updatedById   String?  @map("updated_by_id") @db.Uuid
+  finalizedById String?  @map("finalized_by_id") @db.Uuid
+  voidedById    String?  @map("voided_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  payrollPeriod   PayrollPeriod   @relation(fields: [payrollPeriodId], references: [id], onDelete: Restrict)
+  supersedes      PayrollRecord?  @relation("PayrollRevision", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy    PayrollRecord[] @relation("PayrollRevision")
+  createdBy       User?           @relation("RecordCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy       User?           @relation("RecordUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  finalizedBy     User?           @relation("RecordFinalizedBy", fields: [finalizedById], references: [id], onDelete: SetNull)
+  voidedBy        User?           @relation("RecordVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  emailDeliveries EmailDelivery[]
+
+  @@unique([employeeId, payrollPeriodId, revision])
+  @@index([payrollPeriodId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("payroll_records")
+}
+
+model EmailBatch {
+  id              String           @id @default(uuid()) @db.Uuid
+  payrollPeriodId String           @map("payroll_period_id") @db.Uuid
+  initiatedById   String           @map("initiated_by_id") @db.Uuid
+  status          EmailBatchStatus @default(QUEUED)
+  totalCount      Int              @default(0) @map("total_count")
+  sentCount       Int              @default(0) @map("sent_count")
+  failedCount     Int              @default(0) @map("failed_count")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  payrollPeriod PayrollPeriod   @relation(fields: [payrollPeriodId], references: [id], onDelete: Restrict)
+  initiatedBy   User            @relation(fields: [initiatedById], references: [id], onDelete: Restrict)
+  deliveries    EmailDelivery[]
+
+  @@index([payrollPeriodId])
+  @@index([status])
+  @@map("email_batches")
+}
+
+model EmailDelivery {
+  id                        String              @id @default(uuid()) @db.Uuid
+  batchId                   String              @map("batch_id") @db.Uuid
+  payrollRecordId           String              @map("payroll_record_id") @db.Uuid
+  recipientEmail            String              @map("recipient_email")
+  recipientName             String              @map("recipient_name")
+  status                    EmailDeliveryStatus @default(QUEUED)
+  attempts                  Int                 @default(0)
+  lastErrorSanitized        String?             @map("last_error_sanitized") @db.VarChar(500)
+  providerResponseSanitized String?             @map("provider_response_sanitized") @db.VarChar(500)
+  sentAt                    DateTime?           @map("sent_at")
+  idempotencyKey            String              @unique @map("idempotency_key")
+  createdAt                 DateTime            @default(now()) @map("created_at")
+  updatedAt                 DateTime            @updatedAt @map("updated_at")
+
+  batch         EmailBatch    @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  payrollRecord PayrollRecord @relation(fields: [payrollRecordId], references: [id], onDelete: Restrict)
+
+  @@index([batchId])
+  @@index([payrollRecordId])
+  @@index([status])
+  @@map("email_deliveries")
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(80)
+  targetType String   @map("target_type") @db.VarChar(80)
+  targetId   String?  @map("target_id") @db.VarChar(80)
+  requestId  String?  @map("request_id") @db.VarChar(80)
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
+
+model LoginAttempt {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([identifier, createdAt])
+  @@map("login_attempts")
+}

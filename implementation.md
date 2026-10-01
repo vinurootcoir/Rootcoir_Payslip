@@ -363,17 +363,17 @@ Use test SMTP/mock transport in automated tests. Never send real payslips from t
 
 ## 18. Implementation milestones
 
-1. Inspect repository and establish conventions.
-2. Define schema, migrations, seed/bootstrap process, and environment validation.
-3. Implement authentication, session revocation, and RBAC.
-4. Implement employee and company management.
-5. Implement payroll periods, payroll entry, calculations, validation, and finalization.
-6. Implement PDF generation from immutable snapshots.
-7. Implement individual and bulk email delivery with durable status tracking.
-8. Implement role-specific UI and dashboards.
-9. Add audit logging, rate limits, security headers, and privacy controls.
-10. Add automated tests, run lint/typecheck/build/migrations, and fix failures.
-11. Write README and operational/deployment documentation.
+1. **Status: Completed.** Inspect repository and establish conventions.
+2. **Status: Completed.** Define schema, migrations, seed/bootstrap process, and environment validation. Migration files are in the repo. Apply them with `npm run db:migrate` after `DIRECT_URL` is set. Create the first Super Admin with `npm run bootstrap:super-admin`.
+3. **Status: Completed.** Implement authentication, session revocation, and RBAC.
+4. **Status: Not started.** Implement employee and company management.
+5. **Status: Not started.** Implement payroll periods, payroll entry, calculations, validation, and finalization.
+6. **Status: Not started.** Implement PDF generation from immutable snapshots.
+7. **Status: Not started.** Implement individual and bulk email delivery with durable status tracking.
+8. **Status: Not started.** Implement role-specific UI and dashboards.
+9. **Status: Not started.** Add audit logging, rate limits, security headers, and privacy controls. Login and password-change audit events, login rate limits, and session revocation are already in place from milestone 3. Security headers and the broader privacy controls are still open.
+10. **Status: Not started.** Add automated tests, run lint/typecheck/build/migrations, and fix failures.
+11. **Status: Not started.** Write README and operational/deployment documentation.
 
 ## 19. Definition of done
 
