@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/server/auth/session";
 import { getDb } from "@/server/db";
 import { isUuid } from "@/lib/ids";
 import { canDownloadPayslip } from "./pdf-access";
+import { loadPayslipTemplate } from "@/server/company/queries";
 import { renderPayslipPdf } from "./pdf";
 import { buildPayslipDocument } from "./payslip-document";
 import { readSnapshot } from "./snapshot";
@@ -39,7 +40,7 @@ export async function loadPayslipPdf(
     status: record.status,
     voidReason: record.voidReason,
   });
-  const rendered = await renderPayslipPdf(document);
+  const rendered = await renderPayslipPdf(document, await loadPayslipTemplate());
   await getDb().auditLog.create({
     data: {
       actorId: actor.id,

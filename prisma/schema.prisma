@@ -100,9 +100,17 @@ model Employee {
   department     String
   dateOfJoining  DateTime         @map("date_of_joining") @db.Date
   status         EmploymentStatus @default(ACTIVE)
-  pan            String?
-  uan            String?
-  esiNumber      String?          @map("esi_number")
+  pan              String?
+  uan              String?
+  esiNumber        String?          @map("esi_number")
+  basicSalary      Decimal          @default(0) @map("basic_salary") @db.Decimal(14, 2)
+  hra              Decimal          @default(0) @db.Decimal(14, 2)
+  specialAllowance Decimal          @default(0) @map("special_allowance") @db.Decimal(14, 2)
+  otherAllowances  Decimal          @default(0) @map("other_allowances") @db.Decimal(14, 2)
+  employeePf       Decimal          @default(0) @map("employee_pf") @db.Decimal(14, 2)
+  employeeEsi      Decimal          @default(0) @map("employee_esi") @db.Decimal(14, 2)
+  professionalTax  Decimal          @default(0) @map("professional_tax") @db.Decimal(14, 2)
+  tds              Decimal          @default(0) @db.Decimal(14, 2)
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
   createdById    String?          @map("created_by_id") @db.Uuid
@@ -127,6 +135,7 @@ model CompanySettings {
   includeOvertime      Boolean  @default(false) @map("include_overtime")
   emailSubjectTemplate String   @default("") @map("email_subject_template")
   emailBodyTemplate    String   @default("") @map("email_body_template") @db.Text
+  payslipTemplate      Bytes?   @map("payslip_template")
   updatedAt            DateTime @updatedAt @map("updated_at")
   updatedById          String?  @map("updated_by_id") @db.Uuid
 
@@ -168,6 +177,8 @@ model PayrollRecord {
   totalWorkingDays Decimal @map("total_working_days") @db.Decimal(6, 2)
   paidDays         Decimal @map("paid_days") @db.Decimal(6, 2)
   lopDays          Decimal @map("lop_days") @db.Decimal(6, 2)
+  casualLeaveDays  Decimal @default(0) @map("casual_leave_days") @db.Decimal(6, 2)
+  sickLeaveDays    Decimal @default(0) @map("sick_leave_days") @db.Decimal(6, 2)
 
   basicSalary      Decimal  @map("basic_salary") @db.Decimal(14, 2)
   hra              Decimal  @db.Decimal(14, 2)

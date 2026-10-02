@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddEmployeeForm } from "@/components/add-employee-form";
+import { AttendanceImportForm } from "@/components/attendance-import-form";
 import { ConfirmForm } from "@/components/confirm-form";
 import { requireRole } from "@/server/auth/guard";
 import { csrfTokenFromRequest } from "@/server/auth/request";
@@ -27,10 +28,16 @@ export default async function PayrollPeriodPage({ params }: { params: Promise<{ 
       <section className="rounded-[10px] border border-border bg-surface shadow-[var(--shadow-card)]">
         <div className="px-4 py-4">
           <h1 className="text-[21px] font-bold tracking-[-0.02em]">{formatPayrollMonth(period.year, period.month)}</h1>
-          <p className="text-[12.5px] text-muted">{period.status === "FINALIZED" ? "Finalized" : "Draft"}</p>
+          <p className="text-[12.5px] text-muted">
+            {period.status === "FINALIZED"
+              ? "Finalized. These payslips stay as they were on the day you locked the month."
+              : "Draft. Add employees, enter pay, and change attendance before you finalize."}
+          </p>
         </div>
         {period.records.length === 0 ? (
-          <p className="border-t border-border-soft px-4 py-10 text-[13.5px] text-muted">No payslips in this period yet.</p>
+          <p className="border-t border-border-soft px-4 py-10 text-[13.5px] text-muted">
+            No employees on this payroll yet. Choose them on the right. Active employees can be added together.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-left">
@@ -70,11 +77,24 @@ export default async function PayrollPeriodPage({ params }: { params: Promise<{ 
             </table>
           </div>
         )}
+        {period.status === "DRAFT" ? (
+          <div className="border-t border-border-soft px-4 py-4">
+            <h2 className="text-[14.5px] font-bold">Attendance upload</h2>
+            <p className="mt-1 text-[12.5px] text-muted">
+              Update working days, paid days, and absent days for this month. Rows for another month are rejected.
+            </p>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not a page navigation */}
+            <a href="/payroll/attendance-sample" className="mt-2 inline-flex text-[13px] font-medium text-accent">
+              Download sample Excel
+            </a>
+            <AttendanceImportForm csrf={csrf} periodId={period.id} />
+          </div>
+        ) : null}
       </section>
       <div className="flex flex-col gap-4">
         {period.status === "DRAFT" ? (
           <section className="rounded-[10px] border border-border bg-surface p-4 shadow-[var(--shadow-card)]">
-            <h2 className="mb-3 text-[14.5px] font-bold">Add employee</h2>
+            <h2 className="mb-3 text-[14.5px] font-bold">Choose employees</h2>
             <AddEmployeeForm csrf={csrf} periodId={period.id} employees={available} />
           </section>
         ) : null}

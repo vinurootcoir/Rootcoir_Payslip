@@ -8,7 +8,8 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { requireRole } from "@/server/auth/guard";
 import { mutationGuard } from "@/server/auth/request";
 import { getDb } from "@/server/db";
-import { employeeFormData, employeeInputSchema, type EmployeeInput } from "./schema";
+import { payslipAmounts } from "./salary";
+import { employeeFormData, employeeInputSchema, salaryFormData, salaryInputSchema, type EmployeeInput } from "./schema";
 import {
   EMPLOYEE_SHEET_BYTE_LIMIT,
   parseEmployeeSheet,
@@ -177,6 +178,99 @@ export async function saveEmployee(
   revalidatePath("/employees");
   revalidatePath(`/employees/${savedId}`);
   redirect(`/employees/${savedId}`);
+}
+
+export type SalaryFormState = { error: string | null; saved: boolean; warning: string | null };
+
+export async function saveEmployeeSalary(
+  _state: SalaryFormState,
+  formData: FormData,
+): Promise<SalaryFormState> {
+  const blocked = await mutationGuard(formData);
+  if (blocked) return { error: blocked, saved: false, warning: null };
+  const actor = await requireRole(staff);
+  const parsed = salaryInputSchema.safeParse(salaryFormData(formData));
+  if (!parsed.success) return { error: firstIssue(parsed.error), saved: false, warning: null };
+
+  const input = parsed.data;
+  const preview = payslipAmounts(input, "INR");
+  const warning = preview.errors.find((error) => error.includes("negative")) ?? null;
+
+  try {
+    const db = getDb();
+    const company = await db.companySettings.findUnique({ where: { id: 1 }, select: { currency: true } });
+    const currency = company?.currency || "INR";
+    await db.$transaction(async (tx) => {
+      const updated = await tx.employee.updateMany({
+        where: { id: input.id },
+        data: {
+          basicSalary: input.basicSalary.toFixed(2),
+          hra: input.hra.toFixed(2),
+          specialAllowance: input.specialAllowance.toFixed(2),
+          otherAllowances: input.otherAllowances.toFixed(2),
+          employeePf: input.employeePf.toFixed(2),
+          employeeEsi: input.employeeEsi.toFixed(2),
+          professionalTax: input.professionalTax.toFixed(2),
+          tds: input.tds.toFixed(2),
+          updatedById: actor.id,
+        },
+      });
+      if (updated.count !== 1) throw new Error("MISSING");
+      const drafts = await tx.payrollRecord.findMany({
+        where: { employeeId: input.id, status: "DRAFT" },
+        select: {
+          id: true,
+          totalWorkingDays: true,
+          paidDays: true,
+          lopDays: true,
+          overtime: true,
+          bonus: true,
+          salaryAdvance: true,
+          otherDeductions: true,
+        },
+      });
+      for (const draft of drafts) {
+        const amounts = payslipAmounts(input, currency, draft);
+        await tx.payrollRecord.update({
+          where: { id: draft.id, status: "DRAFT" },
+          data: {
+            basicSalary: amounts.basicSalary,
+            hra: amounts.hra,
+            specialAllowance: amounts.specialAllowance,
+            otherAllowances: amounts.otherAllowances,
+            employeePf: amounts.employeePf,
+            employeeEsi: amounts.employeeEsi,
+            professionalTax: amounts.professionalTax,
+            tds: amounts.tds,
+            grossEarnings: amounts.grossEarnings,
+            totalDeductions: amounts.totalDeductions,
+            netPay: amounts.netPay,
+            amountInWords: amounts.amountInWords,
+            currency,
+            updatedById: actor.id,
+          },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: "employee.update",
+          targetType: "employee",
+          targetId: input.id,
+          requestId: crypto.randomUUID(),
+          metadata: { fields: ["salary"] },
+        },
+      });
+    });
+  } catch (error) {
+    unstable_rethrow(error);
+    logFailure("employee.salary", error);
+    return { error: "Something went wrong. Try again.", saved: false, warning: null };
+  }
+
+  revalidatePath(`/employees/${input.id}`);
+  revalidatePath("/payroll", "layout");
+  return { error: null, saved: true, warning };
 }
 
 export type EmployeeImportState = {

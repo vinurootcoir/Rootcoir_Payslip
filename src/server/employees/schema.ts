@@ -1,6 +1,8 @@
 import { EmploymentStatus } from "@prisma/client";
+import Decimal from "decimal.js";
 import { z } from "zod";
 import { formatIsoDate, parseIsoDate } from "@/lib/dates";
+import { toMoney } from "@/lib/money";
 
 const optionalText = (max: number) =>
   z
@@ -51,6 +53,52 @@ export const employeeInputSchema = z.object({
 });
 
 export type EmployeeInput = z.infer<typeof employeeInputSchema>;
+
+const MAX_MONEY = new Decimal("999999999999.99");
+
+function amount(label: string) {
+  return z.string().trim().transform((value, ctx) => {
+    const text = value.length === 0 ? "0" : value;
+    if (!/^\d+(\.\d{1,4})?$/.test(text)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Enter ${label} as a number.` });
+      return z.NEVER;
+    }
+    const money = toMoney(text);
+    if (money.gt(MAX_MONEY)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${label} is too large.` });
+      return z.NEVER;
+    }
+    return money;
+  });
+}
+
+export const salaryInputSchema = z.object({
+  id: z.string().uuid(),
+  basicSalary: amount("basic salary"),
+  hra: amount("HRA"),
+  specialAllowance: amount("special allowance"),
+  otherAllowances: amount("other allowances"),
+  employeePf: amount("employee PF"),
+  employeeEsi: amount("employee ESI"),
+  professionalTax: amount("professional tax"),
+  tds: amount("TDS"),
+});
+
+export type SalaryInput = z.infer<typeof salaryInputSchema>;
+
+export function salaryFormData(formData: FormData) {
+  return {
+    id: formData.get("id"),
+    basicSalary: formData.get("basicSalary") ?? "",
+    hra: formData.get("hra") ?? "",
+    specialAllowance: formData.get("specialAllowance") ?? "",
+    otherAllowances: formData.get("otherAllowances") ?? "",
+    employeePf: formData.get("employeePf") ?? "",
+    employeeEsi: formData.get("employeeEsi") ?? "",
+    professionalTax: formData.get("professionalTax") ?? "",
+    tds: formData.get("tds") ?? "",
+  };
+}
 
 export function employeeDefaults(employee: {
   id: string;

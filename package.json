@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test tests/payslip-pdf.test.ts tests/email.test.ts tests/dashboard-access.test.ts tests/payroll.test.ts tests/security.test.ts tests/error-details.test.ts tests/employee-sheet.test.ts",
+    "test": "tsx --test tests/payslip-pdf.test.ts tests/email.test.ts tests/dashboard-access.test.ts tests/payroll.test.ts tests/security.test.ts tests/error-details.test.ts tests/employee-sheet.test.ts tests/attendance-sheet.test.ts tests/salary.test.ts",
     "email:work": "tsx scripts/email-worker.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",

@@ -107,6 +107,12 @@ export function buildPayslipDocument(snapshot: PayslipSnapshot, meta: PayslipPdf
         { label: "Total working days", value: days(snapshot.attendance.totalWorkingDays) },
         { label: "Paid days", value: days(snapshot.attendance.paidDays) },
         { label: "Absent / LOP days", value: days(snapshot.attendance.lopDays) },
+        ...(snapshot.attendance.casualLeaveDays
+          ? [{ label: "Casual leave", value: days(snapshot.attendance.casualLeaveDays) }]
+          : []),
+        ...(snapshot.attendance.sickLeaveDays
+          ? [{ label: "Sick leave", value: days(snapshot.attendance.sickLeaveDays) }]
+          : []),
       ],
     },
     {

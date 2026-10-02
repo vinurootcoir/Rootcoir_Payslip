@@ -65,6 +65,29 @@ export const payrollEntrySchema = z.object({
 
 export type PayrollEntryInput = z.infer<typeof payrollEntrySchema>;
 
+const optionalDays = (label: string) =>
+  z.preprocess(
+    (value) => (value == null || value === "" ? "0" : value),
+    days(label),
+  );
+
+export const attendanceDaysSchema = z
+  .object({
+    totalWorkingDays: days("total working days"),
+    paidDays: days("paid days"),
+    lopDays: days("absent days"),
+    casualLeaveDays: optionalDays("casual leave"),
+    sickLeaveDays: optionalDays("sick leave"),
+  })
+  .superRefine((value, ctx) => {
+    if (toDays(value.paidDays.plus(value.lopDays)).gt(toDays(value.totalWorkingDays))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Paid days and absent days cannot exceed total working days.",
+      });
+    }
+  });
+
 export function payrollEntryFormData(formData: FormData) {
   const read = (name: string) => {
     const value = formData.get(name);

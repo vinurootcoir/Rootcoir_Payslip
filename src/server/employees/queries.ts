@@ -60,6 +60,51 @@ export async function listEmployees(input: { q: string; status: EmploymentStatus
   };
 }
 
+export async function suggestEmployees(q: string) {
+  const term = q.trim().slice(0, 80);
+  if (term.length === 0) return [];
+  return getDb().employee.findMany({
+    where: {
+      OR: [
+        { fullName: { contains: term, mode: "insensitive" } },
+        { employeeNumber: { contains: term, mode: "insensitive" } },
+        { workEmail: { contains: term, mode: "insensitive" } },
+        { department: { contains: term, mode: "insensitive" } },
+        { designation: { contains: term, mode: "insensitive" } },
+      ],
+    },
+    select: {
+      id: true,
+      fullName: true,
+      employeeNumber: true,
+      workEmail: true,
+      department: true,
+    },
+    orderBy: [{ fullName: "asc" }, { employeeNumber: "asc" }],
+    take: 8,
+  });
+}
+
+export async function listEmployeePayroll(employeeId: string) {
+  return getDb().payrollRecord.findMany({
+    where: { employeeId },
+    orderBy: [{ payrollPeriod: { year: "desc" } }, { payrollPeriod: { month: "desc" } }, { revision: "desc" }],
+    select: {
+      id: true,
+      status: true,
+      payslipNumber: true,
+      totalWorkingDays: true,
+      paidDays: true,
+      lopDays: true,
+      casualLeaveDays: true,
+      sickLeaveDays: true,
+      netPay: true,
+      currency: true,
+      payrollPeriod: { select: { id: true, year: true, month: true } },
+    },
+  });
+}
+
 export async function getEmployee(id: string) {
   return getDb().employee.findUnique({
     where: { id },
@@ -69,6 +114,14 @@ export async function getEmployee(id: string) {
       pan: true,
       uan: true,
       esiNumber: true,
+      basicSalary: true,
+      hra: true,
+      specialAllowance: true,
+      otherAllowances: true,
+      employeePf: true,
+      employeeEsi: true,
+      professionalTax: true,
+      tds: true,
       user: { select: { id: true } },
     },
   });
