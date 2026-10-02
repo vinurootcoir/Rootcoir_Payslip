@@ -30,6 +30,13 @@ function tokensMatch(left: string, right: string): boolean {
   return timingSafeEqual(a, b);
 }
 
+export async function mutationGuard(formData: FormData): Promise<string | null> {
+  if (!(await requestIsSameOrigin()) || !(await csrfIsValid(formData.get("csrf")))) {
+    return "The form expired. Refresh the page and try again.";
+  }
+  return null;
+}
+
 export async function csrfIsValid(formValue: FormDataEntryValue | null): Promise<boolean> {
   if (typeof formValue !== "string" || formValue.length < 32) return false;
   const cookieStore = await cookies();

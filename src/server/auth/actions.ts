@@ -1,5 +1,7 @@
 "use server";
 
+import { logFailure } from "@/lib/log";
+
 import { headers } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { z } from "zod";
@@ -33,8 +35,8 @@ const loginSchema = z.object({
 const passwordSchema = z
   .object({
     currentPassword: z.string().min(1).max(128),
-    newPassword: z.string().min(12).max(128),
-    confirmPassword: z.string().min(12).max(128),
+    newPassword: z.string().min(6).max(128),
+    confirmPassword: z.string().min(6).max(128),
   })
   .refine((value) => value.newPassword === value.confirmPassword, {
     path: ["confirmPassword"],
@@ -101,7 +103,7 @@ export async function login(_state: FormState, formData: FormData): Promise<Form
     await createSession(user.id);
   } catch (error) {
     unstable_rethrow(error);
-    console.error("auth.login", error instanceof Error ? error.name : "error");
+    logFailure("auth.login", error);
     return { error: genericFailure };
   }
 
@@ -143,7 +145,7 @@ export async function changePassword(
     confirmPassword: formData.get("confirmPassword"),
   });
   if (!parsed.success) {
-    return { error: "Use 12 to 128 characters, and make both new passwords match." };
+    return { error: "Use 6 to 128 characters, and make both new passwords match." };
   }
 
   try {
@@ -189,7 +191,7 @@ export async function changePassword(
     ]);
   } catch (error) {
     unstable_rethrow(error);
-    console.error("auth.password", error instanceof Error ? error.name : "error");
+    logFailure("auth.password", error);
     return { error: genericFailure };
   }
 

@@ -19,6 +19,16 @@ export function toDays(value: Decimal.Value): Decimal {
   return new Decimal(value).toDecimalPlaces(DAY_SCALE, Decimal.ROUND_HALF_UP);
 }
 
+export function formatMoney(value: Decimal.Value, currency = "INR"): string {
+  const money = toMoney(value);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(money.toFixed(2)));
+}
+
 export function sumMoney(values: Decimal.Value[]): Decimal {
   const total = values.reduce<Decimal>(
     (sum, value) => sum.plus(toMoney(value)),

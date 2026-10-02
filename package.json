@@ -7,11 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test tests/payslip-pdf.test.ts tests/email.test.ts tests/dashboard-access.test.ts tests/payroll.test.ts tests/security.test.ts tests/error-details.test.ts",
+    "email:work": "tsx scripts/email-worker.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
-    "bootstrap:super-admin": "tsx scripts/bootstrap-super-admin.ts"
+    "bootstrap:super-admin": "tsx scripts/bootstrap-super-admin.ts",
+    "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -19,6 +22,8 @@
     "decimal.js": "^10.6.0",
     "jose": "^6.2.12",
     "next": "16.3.8",
+    "nodemailer": "^10.0.13",
+    "pdfkit": "^0.20.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
@@ -27,6 +32,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^18.0.5",

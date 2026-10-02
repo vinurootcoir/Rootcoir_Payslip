@@ -6,19 +6,31 @@ export function isProduction(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
+export function sessionCookieNameFor(production: boolean): string {
+  return production ? "__Host-session" : "session";
+}
+
+export function csrfCookieNameFor(production: boolean): string {
+  return production ? "__Host-csrf" : "csrf";
+}
+
 export function sessionCookieName(): string {
-  return isProduction() ? "__Host-session" : "session";
+  return sessionCookieNameFor(isProduction());
 }
 
 export function csrfCookieName(): string {
-  return isProduction() ? "__Host-csrf" : "csrf";
+  return csrfCookieNameFor(isProduction());
 }
 
-export function cookieBase() {
+export function cookieAttributes(production: boolean) {
   return {
-    httpOnly: true,
-    secure: isProduction(),
+    httpOnly: true as const,
+    secure: production,
     sameSite: "lax" as const,
     path: "/",
   };
+}
+
+export function cookieBase() {
+  return cookieAttributes(isProduction());
 }

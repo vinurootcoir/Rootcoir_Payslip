@@ -22,7 +22,7 @@ function readArg(flag: string): string | undefined {
 
 const inputSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
-  password: z.string().min(12).max(128),
+  password: z.string().min(6).max(128),
 });
 
 async function main() {
@@ -33,7 +33,7 @@ async function main() {
 
   if (!parsed.success) {
     console.error(
-      "Provide --email and a --password of 12 to 128 characters. You can also set BOOTSTRAP_SUPER_ADMIN_EMAIL and BOOTSTRAP_SUPER_ADMIN_PASSWORD for this command only.",
+      "Provide --email and a --password of 6 to 128 characters. You can also set BOOTSTRAP_SUPER_ADMIN_EMAIL and BOOTSTRAP_SUPER_ADMIN_PASSWORD for this command only.",
     );
     process.exitCode = 1;
     return;
