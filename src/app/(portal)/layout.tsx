@@ -6,7 +6,6 @@ import { logout } from "@/server/auth/actions";
 import { csrfTokenFromRequest } from "@/server/auth/request";
 import { requireUser } from "@/server/auth/guard";
 import { roleLabel } from "@/lib/roles";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Breadcrumb, EmployeeSearch, SidebarNav, type NavItem } from "@/components/portal-nav";
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
@@ -68,7 +67,6 @@ export default async function PortalLayout({ children }: { children: ReactNode }
           ) : (
             <div className="flex-1" />
           )}
-          <ThemeToggle />
           {isStaff ? (
             <Link
               href="/employees/new"

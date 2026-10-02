@@ -15,10 +15,11 @@ const filters: { label: string; status: EmploymentStatus | null }[] = [
 export default async function EmployeesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; page?: string; imported?: string }>;
 }) {
   await requireRole(["SUPER_ADMIN", "ADMIN"]);
   const params = await searchParams;
+  const imported = importedCount(params.imported);
   const query = parseEmployeeListQuery(params);
   const result = await listEmployees(query);
 
@@ -30,6 +31,11 @@ export default async function EmployeesPage({
           <p className="text-[12.5px] text-muted">
             {result.total} {result.total === 1 ? "record" : "records"}
           </p>
+          {imported ? (
+            <p className="mt-1 text-[13px] text-positive">
+              {imported} {imported === 1 ? "employee was" : "employees were"} added.
+            </p>
+          ) : null}
         </div>
         <div className="flex w-fit gap-1 rounded-[8px] bg-surface-2 p-1">
           {filters.map((filter) => {
@@ -106,6 +112,13 @@ export default async function EmployeesPage({
       ) : null}
     </section>
   );
+}
+
+function importedCount(value: string | undefined): number | null {
+  if (!value || !/^\d+$/.test(value)) return null;
+  const count = Number(value);
+  if (count < 1 || count > 300) return null;
+  return count;
 }
 
 function employeeHref(input: { q: string; status: EmploymentStatus | null; page: number }) {

@@ -9,6 +9,13 @@ import { requireRole } from "@/server/auth/guard";
 import { mutationGuard } from "@/server/auth/request";
 import { getDb } from "@/server/db";
 import { employeeFormData, employeeInputSchema, type EmployeeInput } from "./schema";
+import {
+  EMPLOYEE_SHEET_BYTE_LIMIT,
+  parseEmployeeSheet,
+  type EmployeeSheetError,
+  type EmployeeSheetPreview,
+  type ParsedEmployeeRow,
+} from "./sheet";
 
 export type EmployeeFormState = { error: string | null };
 
@@ -170,4 +177,124 @@ export async function saveEmployee(
   revalidatePath("/employees");
   revalidatePath(`/employees/${savedId}`);
   redirect(`/employees/${savedId}`);
+}
+
+export type EmployeeImportState = {
+  error: string | null;
+  errors: EmployeeSheetError[];
+  preview: EmployeeSheetPreview[] | null;
+};
+
+const emptyImport: EmployeeImportState = { error: null, errors: [], preview: null };
+
+export async function reviewEmployeeSheet(formData: FormData): Promise<EmployeeImportState> {
+  const prepared = await preparedSheet(formData);
+  if (!prepared.ok) return prepared.state;
+  return { error: null, errors: [], preview: prepared.rows.map((row) => row.preview) };
+}
+
+export async function importEmployeeSheet(formData: FormData): Promise<EmployeeImportState> {
+  const prepared = await preparedSheet(formData);
+  if (!prepared.ok) return prepared.state;
+
+  try {
+    await getDb().$transaction(async (tx) => {
+      await tx.employee.createMany({
+        data: prepared.rows.map((row) => ({
+          employeeNumber: row.input.employeeNumber,
+          fullName: row.input.fullName,
+          workEmail: row.input.workEmail,
+          phone: row.input.phone,
+          designation: row.input.designation,
+          department: row.input.department,
+          dateOfJoining: row.input.dateOfJoining,
+          status: row.input.status,
+          pan: row.input.pan,
+          uan: row.input.uan,
+          esiNumber: row.input.esiNumber,
+          createdById: prepared.actorId,
+          updatedById: prepared.actorId,
+        })),
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: prepared.actorId,
+          action: "employee.import",
+          targetType: "employee",
+          requestId: crypto.randomUUID(),
+          metadata: { count: prepared.rows.length },
+        },
+      });
+    });
+  } catch (error) {
+    unstable_rethrow(error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { ...emptyImport, error: duplicateMessage(error) };
+    }
+    logFailure("employee.import", error);
+    return { ...emptyImport, error: "Something went wrong. Try again." };
+  }
+
+  revalidatePath("/employees");
+  redirect(`/employees?imported=${prepared.rows.length}`);
+}
+
+async function preparedSheet(
+  formData: FormData,
+): Promise<{ ok: true; actorId: string; rows: ParsedEmployeeRow[] } | { ok: false; state: EmployeeImportState }> {
+  const blocked = await mutationGuard(formData);
+  if (blocked) return { ok: false, state: { ...emptyImport, error: blocked } };
+  const actor = await requireRole(staff);
+  const file = await workbookBytes(formData);
+  if ("error" in file) return { ok: false, state: { ...emptyImport, error: file.error } };
+
+  let parsed: Awaited<ReturnType<typeof parseEmployeeSheet>>;
+  try {
+    parsed = await parseEmployeeSheet(file.bytes);
+  } catch (error) {
+    logFailure("employee.import", error);
+    return { ok: false, state: { ...emptyImport, error: "That Excel file could not be read." } };
+  }
+  if (parsed.errors.length > 0) return { ok: false, state: { ...emptyImport, errors: parsed.errors } };
+
+  const taken = await existingRowErrors(parsed.rows);
+  if (taken.length > 0) return { ok: false, state: { ...emptyImport, errors: taken } };
+  return { ok: true, actorId: actor.id, rows: parsed.rows };
+}
+
+async function workbookBytes(formData: FormData): Promise<{ bytes: Uint8Array } | { error: string }> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose an Excel file." };
+  const name = file.name.toLowerCase();
+  if (!name.endsWith(".xlsx")) return { error: "Upload an .xlsx file. Macro-enabled workbooks are not accepted." };
+  if (file.size > EMPLOYEE_SHEET_BYTE_LIMIT) return { error: "That file is too large." };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) return { error: "Upload an .xlsx file." };
+  if (Buffer.from(bytes).includes(Buffer.from("vbaProject.bin"))) {
+    return { error: "Macro-enabled workbooks are not accepted." };
+  }
+  return { bytes };
+}
+
+async function existingRowErrors(rows: ParsedEmployeeRow[]): Promise<EmployeeSheetError[]> {
+  const existing = await getDb().employee.findMany({
+    where: {
+      OR: [
+        { employeeNumber: { in: rows.map((row) => row.input.employeeNumber) } },
+        { workEmail: { in: rows.map((row) => row.input.workEmail) } },
+      ],
+    },
+    select: { employeeNumber: true, workEmail: true },
+  });
+  const numbers = new Set(existing.map((row) => row.employeeNumber));
+  const emails = new Set(existing.map((row) => row.workEmail));
+  const errors: EmployeeSheetError[] = [];
+  for (const row of rows) {
+    if (numbers.has(row.input.employeeNumber)) {
+      errors.push({ row: row.row, message: "That employee number is already used." });
+    } else if (emails.has(row.input.workEmail)) {
+      errors.push({ row: row.row, message: "That work email is already used." });
+    }
+  }
+  return errors;
 }
