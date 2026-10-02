@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash } from "crypto";
+import { EMAIL_ACTION_LIMIT, EMAIL_ACTION_WINDOW_MS, isOverWindowLimit } from "@/lib/limits";
 import { getDb } from "@/server/db";
 
 const WINDOW_MS = 15 * 60 * 1000;
@@ -40,6 +41,21 @@ export async function recordLoginAttempt(email: string, ip: string): Promise<voi
 export async function isPasswordChangeRateLimited(userId: string): Promise<boolean> {
   const since = new Date(Date.now() - WINDOW_MS);
   return (await countSince(digest("password", userId), since)) >= PASSWORD_LIMIT;
+}
+
+export async function isEmailActionRateLimited(userId: string): Promise<boolean> {
+  const since = new Date(Date.now() - EMAIL_ACTION_WINDOW_MS);
+  const count = await countSince(digest("email-action", userId), since);
+  return isOverWindowLimit(count, EMAIL_ACTION_LIMIT);
+}
+
+export async function recordEmailAction(userId: string): Promise<void> {
+  const since = new Date(Date.now() - EMAIL_ACTION_WINDOW_MS);
+  const identifier = digest("email-action", userId);
+  await getDb().loginAttempt.deleteMany({
+    where: { identifier, createdAt: { lt: since } },
+  });
+  await getDb().loginAttempt.create({ data: { identifier } });
 }
 
 export async function recordPasswordChangeAttempt(userId: string): Promise<void> {

@@ -24,13 +24,18 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(CSRF_HEADER, csrf);
 
+  const requestId = request.headers.get("x-request-id") ?? randomToken();
+  requestHeaders.set("x-request-id", requestId);
+
   const hasSession = request.cookies.has(sessionCookieName());
-  const isLogin = request.nextUrl.pathname === "/login";
-  const response = !hasSession && !isLogin
+  const pathname = request.nextUrl.pathname;
+  const isPublic = pathname === "/login" || pathname === "/health" || pathname === "/health/ready";
+  const response = !hasSession && !isPublic
     ? NextResponse.redirect(new URL("/login", request.url))
     : NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("x-request-id", requestId);
 
-  if (!existingCsrf) {
+  if (!existingCsrf && !pathname.startsWith("/health")) {
     response.cookies.set(csrfName, csrf, cookieBase());
   }
 

@@ -47,7 +47,7 @@ function Field({
         type="password"
         autoComplete={autoComplete}
         required
-        minLength={name === "currentPassword" ? 1 : 12}
+        minLength={name === "currentPassword" ? 1 : 6}
         className="rounded-[8px] border border-border bg-surface px-3 py-2 text-[13.5px] font-normal text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       />
     </label>

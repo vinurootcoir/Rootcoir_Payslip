@@ -289,23 +289,23 @@ For every operation:
 
 ## 14. Security and privacy checklist
 
-- [ ] RBAC enforced server-side on every route/action.
-- [ ] HttpOnly cookie; Secure in production; appropriate SameSite; no JWT in browser storage.
-- [ ] CSRF and origin validation for cookie-authenticated mutations.
-- [ ] Login and email endpoints rate-limited.
-- [ ] Password hashing and secure reset flow (if included).
-- [ ] Session revocation and role-change invalidation.
-- [ ] No IDOR in employee, payroll, PDF, or email endpoints.
-- [ ] Sensitive PAN/UAN/ESI data masked in lists and access-restricted.
-- [ ] Secrets and personal/payroll data redacted from logs.
-- [ ] SQL injection protection through ORM/parameterized queries.
-- [ ] Security headers and a restrictive Content Security Policy where compatible.
-- [ ] Dependency audit and lockfile committed.
-- [ ] Backups and tested restore procedure for Neon.
-- [ ] Database least-privilege credentials and TLS.
-- [ ] No public payslip files or predictable unauthenticated URLs.
-- [ ] Audit events for sensitive actions.
-- [ ] Production errors do not leak internals.
+- [x] RBAC enforced server-side on every route/action.
+- [x] HttpOnly cookie; Secure in production; appropriate SameSite; no JWT in browser storage.
+- [x] CSRF and origin validation for cookie-authenticated mutations.
+- [x] Login and email endpoints rate-limited.
+- [x] Password hashing and secure reset flow (if included). Password reset is not included.
+- [x] Session revocation and role-change invalidation.
+- [x] No IDOR in employee, payroll, PDF, or email endpoints.
+- [x] Sensitive PAN/UAN/ESI data masked in lists and access-restricted.
+- [x] Secrets and personal/payroll data redacted from logs.
+- [x] SQL injection protection through ORM/parameterized queries.
+- [x] Security headers and a restrictive Content Security Policy where compatible.
+- [ ] Dependency audit and lockfile committed. The lockfile is in the repo. A high Prisma CLI finding in `deepmerge-ts` remains; do not force-upgrade Prisma to clear it.
+- [ ] Backups and tested restore procedure for Neon. The restore steps are in the README. A restore has not been rehearsed.
+- [ ] Database least-privilege credentials and TLS. Production database URLs that are set must include `sslmode=require`. A least-privilege database role has not been verified.
+- [x] No public payslip files or predictable unauthenticated URLs.
+- [x] Audit events for sensitive actions.
+- [x] Production errors do not leak internals.
 
 ## 15. Audit logging
 
@@ -366,14 +366,14 @@ Use test SMTP/mock transport in automated tests. Never send real payslips from t
 1. **Status: Completed.** Inspect repository and establish conventions.
 2. **Status: Completed.** Define schema, migrations, seed/bootstrap process, and environment validation. Migration files are in the repo. Apply them with `npm run db:migrate` after `DIRECT_URL` is set. Create the first Super Admin with `npm run bootstrap:super-admin`.
 3. **Status: Completed.** Implement authentication, session revocation, and RBAC.
-4. **Status: Not started.** Implement employee and company management.
-5. **Status: Not started.** Implement payroll periods, payroll entry, calculations, validation, and finalization.
-6. **Status: Not started.** Implement PDF generation from immutable snapshots.
-7. **Status: Not started.** Implement individual and bulk email delivery with durable status tracking.
-8. **Status: Not started.** Implement role-specific UI and dashboards.
-9. **Status: Not started.** Add audit logging, rate limits, security headers, and privacy controls. Login and password-change audit events, login rate limits, and session revocation are already in place from milestone 3. Security headers and the broader privacy controls are still open.
-10. **Status: Not started.** Add automated tests, run lint/typecheck/build/migrations, and fix failures.
-11. **Status: Not started.** Write README and operational/deployment documentation.
+4. **Status: Completed.** Implement employee and company management. Admins can create, search, edit, and deactivate employees. Sensitive identifiers stay off the list. Super Admins edit company settings. Portal logins are created from Users.
+5. **Status: Completed.** Implement payroll periods, payroll entry, calculations, validation, and finalization. Staff can create a month, add active employees, preview and save drafts, and finalize a period. Totals are recalculated on the server. Finalized payslips are immutable snapshots. Corrections use void-and-reissue. A missed employee after finalization needs a new period. Apply migrations and create the first Super Admin before anyone can sign in and use payroll.
+6. **Status: Completed.** Implement PDF generation from immutable snapshots. A finalized or voided payslip downloads on demand from its snapshot. Drafts have no PDF. Staff can download any payslip; an employee can download only their own. Responses use `Cache-Control: private, no-store`. Downloads are audited without salary figures.
+7. **Status: Completed.** Implement individual and bulk email delivery with durable status tracking. Staff can queue one payslip, a selected group, or every eligible employee in a finalized period. Each message goes to that employee’s work email with only their PDF attached. A database queue sends in chunks of 10 via `npm run email:work`. Failed sends can be retried; a sent payslip is emailed again only through an explicit resend.
+8. **Status: Completed.** Implement role-specific UI and dashboards. Employees see their own finalized and voided payslips, can download those PDFs, and see a restricted profile. Admins see payroll-period and email summaries without salary figures. Super Admins manage logins, read the audit log, and see whether mail is configured without revealing secrets.
+9. **Status: Completed.** Security headers and the remaining privacy controls are in place. Responses send a Content-Security-Policy that allows the theme script, plus `nosniff`, frame denial, and HSTS in production. `unsafe-eval` and websocket sources are limited to development. Each request gets an `x-request-id`. `GET /health` and `GET /health/ready` are public; readiness returns only `ok` or `unavailable`. Email sends, resends, and retries are limited to 30 actions per 15 minutes per person. Failure logs record the error name only. Employee lists omit PAN, UAN, and ESI.
+10. **Status: Completed.** Automated tests cover payroll rounding and boundaries, snapshot copies, cookie flags, the content security policy, employee-list fields, email planning, PDF rendering, and access rules. `npm test` (25 tests), typecheck, lint, and the production build passed. `prisma validate` passed, and `prisma migrate deploy` reported no pending migrations. Tests do not sign in against a database, so the nine end-to-end flows in section 16 are not automated. CSV/XLSX import remains out of scope.
+11. **Status: Completed.** The README replaces the starter text with setup, a one-time migration step, Super Admin bootstrap, the email worker, health checks, secret rotation, a Neon restore rehearsal, a deployment checklist, and rollback. The restore rehearsal is documented and has not been performed. The app is not claimed production-ready under section 19 until that rehearsal is done and the Prisma CLI audit finding is accepted or cleared without a Prisma 8 upgrade.
 
 ## 19. Definition of done
 
