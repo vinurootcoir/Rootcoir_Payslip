@@ -62,9 +62,23 @@ function drawRows(doc: PDFKit.PDFDocument, document: PayslipDocument, rows: Pays
   }
 }
 
-function draw(doc: PDFKit.PDFDocument, document: PayslipDocument): void {
+function draw(doc: PDFKit.PDFDocument, document: PayslipDocument, template?: Uint8Array | null): void {
   doc.font("Inter");
-  if (existsSync(logoPath)) {
+  let placedTemplate = false;
+  if (template && template.length > 8) {
+    try {
+      doc.image(Buffer.from(template), 0, 0, {
+        fit: [doc.page.width, doc.page.height],
+        align: "center",
+        valign: "center",
+      });
+      doc.y = 96;
+      placedTemplate = true;
+    } catch {
+      placedTemplate = false;
+    }
+  }
+  if (!placedTemplate && existsSync(logoPath)) {
     doc.save();
     doc.roundedRect(margin, margin, 168, 42, 6).fill(plate);
     doc.restore();
@@ -106,7 +120,10 @@ function draw(doc: PDFKit.PDFDocument, document: PayslipDocument): void {
   writeParagraph(doc, document, document.disclaimer, 8, muted);
 }
 
-export function renderPayslipPdf(document: PayslipDocument): Promise<{ bytes: Buffer; pageCount: number }> {
+export function renderPayslipPdf(
+  document: PayslipDocument,
+  template?: Uint8Array | null,
+): Promise<{ bytes: Buffer; pageCount: number }> {
   const doc = new PDFDocument({ size: "A4", margin, bufferPages: true });
   doc.registerFont("Inter", regularFont);
   doc.registerFont("Inter-Bold", boldFont);
@@ -117,7 +134,7 @@ export function renderPayslipPdf(document: PayslipDocument): Promise<{ bytes: Bu
     doc.on("end", () => {
       resolve({ bytes: Buffer.concat(chunks), pageCount });
     });
-    draw(doc, document);
+    draw(doc, document, template);
     const pageCount = doc.bufferedPageRange().count;
     doc.end();
   });

@@ -14,7 +14,13 @@ export type PayslipSnapshot = {
     uan: string | null;
     esiNumber: string | null;
   };
-  attendance: { totalWorkingDays: string; paidDays: string; lopDays: string };
+  attendance: {
+    totalWorkingDays: string;
+    paidDays: string;
+    lopDays: string;
+    casualLeaveDays?: string;
+    sickLeaveDays?: string;
+  };
   earnings: {
     basicSalary: string;
     hra: string;
@@ -56,6 +62,7 @@ export function buildSnapshot(input: {
   };
   components: PayrollInput;
   payslipNumber: string;
+  leave?: { casualLeaveDays: Prisma.Decimal; sickLeaveDays: Prisma.Decimal };
 }): PayslipSnapshot {
   const totals = calculatePayroll(input.components, input.company.currency);
   const components = input.components;
@@ -80,6 +87,8 @@ export function buildSnapshot(input: {
       totalWorkingDays: components.totalWorkingDays.toFixed(2),
       paidDays: components.paidDays.toFixed(2),
       lopDays: components.lopDays.toFixed(2),
+      casualLeaveDays: input.leave?.casualLeaveDays.toFixed(2),
+      sickLeaveDays: input.leave?.sickLeaveDays.toFixed(2),
     },
     earnings: {
       basicSalary: components.basicSalary.toFixed(2),

@@ -46,9 +46,9 @@ export async function employeesAvailableForPeriod(periodId: string) {
   });
   const taken = existing.map((row) => row.employeeId);
   return getDb().employee.findMany({
-    where: { status: "ACTIVE", id: { notIn: taken } },
-    orderBy: { fullName: "asc" },
-    select: { id: true, fullName: true, employeeNumber: true },
+    where: { id: { notIn: taken } },
+    orderBy: [{ status: "asc" }, { fullName: "asc" }],
+    select: { id: true, fullName: true, employeeNumber: true, status: true },
   });
 }
 

@@ -70,23 +70,40 @@ export default async function EmployeesPage({
               </tr>
             </thead>
             <tbody>
-              {result.employees.map((employee) => (
-                <tr key={employee.id} className="border-b border-border-soft hover:bg-surface-2">
-                  <td className="px-4 py-3">
-                    <Link href={`/employees/${employee.id}`} className="text-[13.5px] font-medium text-text">
-                      {employee.fullName}
-                    </Link>
-                    <p className="text-[12.5px] text-muted">{employee.workEmail}</p>
-                    <p className="text-[12.5px] text-faint">{employee.designation}</p>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-[12.5px] text-text">{employee.employeeNumber}</td>
-                  <td className="px-4 py-3 text-[13px] text-text">{employee.department}</td>
-                  <td className="px-4 py-3 font-mono text-[12.5px] text-muted">{formatDisplayDate(employee.dateOfJoining)}</td>
-                  <td className="px-4 py-3">
-                    <StatusPill status={employee.status} />
-                  </td>
-                </tr>
-              ))}
+              {result.employees.map((employee) => {
+                const href = `/employees/${employee.id}`;
+                return (
+                  <tr key={employee.id} className="border-b border-border-soft hover:bg-surface-2">
+                    <td className="p-0">
+                      <Link href={href} className="block px-4 py-3">
+                        <span className="text-[13.5px] font-medium text-text">{employee.fullName}</span>
+                        <span className="block text-[12.5px] text-muted">{employee.workEmail}</span>
+                        <span className="block text-[12.5px] text-faint">{employee.designation}</span>
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link href={href} className="block px-4 py-3 font-mono text-[12.5px] text-text">
+                        {employee.employeeNumber}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link href={href} className="block px-4 py-3 text-[13px] text-text">
+                        {employee.department}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link href={href} className="block px-4 py-3 font-mono text-[12.5px] text-muted">
+                        {formatDisplayDate(employee.dateOfJoining)}
+                      </Link>
+                    </td>
+                    <td className="p-0">
+                      <Link href={href} className="block px-4 py-3">
+                        <StatusPill status={employee.status} />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

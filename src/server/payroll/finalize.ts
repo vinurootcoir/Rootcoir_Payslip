@@ -87,6 +87,8 @@ export async function finalizePayrollPeriod(
           totalWorkingDays: true,
           paidDays: true,
           lopDays: true,
+          casualLeaveDays: true,
+          sickLeaveDays: true,
           basicSalary: true,
           hra: true,
           specialAllowance: true,
@@ -130,6 +132,7 @@ export async function finalizePayrollPeriod(
           employee: row.employee,
           components,
           payslipNumber,
+          leave: { casualLeaveDays: row.casualLeaveDays, sickLeaveDays: row.sickLeaveDays },
         });
         await tx.payrollRecord.update({
           where: { id: row.id, status: "DRAFT" },
@@ -217,6 +220,8 @@ export async function voidAndReissue(
           totalWorkingDays: true,
           paidDays: true,
           lopDays: true,
+          casualLeaveDays: true,
+          sickLeaveDays: true,
           basicSalary: true,
           hra: true,
           specialAllowance: true,
@@ -252,6 +257,8 @@ export async function voidAndReissue(
           totalWorkingDays: current.totalWorkingDays,
           paidDays: current.paidDays,
           lopDays: current.lopDays,
+          casualLeaveDays: current.casualLeaveDays,
+          sickLeaveDays: current.sickLeaveDays,
           basicSalary: current.basicSalary,
           hra: current.hra,
           specialAllowance: current.specialAllowance,
@@ -336,6 +343,8 @@ export async function finalizeRevision(
           totalWorkingDays: true,
           paidDays: true,
           lopDays: true,
+          casualLeaveDays: true,
+          sickLeaveDays: true,
           basicSalary: true,
           hra: true,
           specialAllowance: true,
@@ -379,6 +388,7 @@ export async function finalizeRevision(
         employee: row.employee,
         components: asComponents(row),
         payslipNumber,
+        leave: { casualLeaveDays: row.casualLeaveDays, sickLeaveDays: row.sickLeaveDays },
       });
       await tx.payrollRecord.update({
         where: { id: row.id, status: "DRAFT" },

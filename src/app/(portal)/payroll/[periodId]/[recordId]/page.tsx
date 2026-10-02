@@ -204,6 +204,8 @@ function FinalizedView({
         ["Total working days", snapshot.attendance.totalWorkingDays],
         ["Paid days", snapshot.attendance.paidDays],
         ["Absent / LOP days", snapshot.attendance.lopDays],
+        ...(snapshot.attendance.casualLeaveDays ? [["Casual leave", snapshot.attendance.casualLeaveDays] as const] : []),
+        ...(snapshot.attendance.sickLeaveDays ? [["Sick leave", snapshot.attendance.sickLeaveDays] as const] : []),
         ["Basic salary", formatMoney(snapshot.earnings.basicSalary, moneyCurrency)],
         ["HRA", formatMoney(snapshot.earnings.hra, moneyCurrency)],
         ["Special allowance", formatMoney(snapshot.earnings.specialAllowance, moneyCurrency)],

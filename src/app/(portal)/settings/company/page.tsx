@@ -1,11 +1,16 @@
 import { CompanyForm } from "@/components/company-form";
+import { PayslipTemplateForm } from "@/components/payslip-template-form";
 import { requireRole } from "@/server/auth/guard";
 import { csrfTokenFromRequest } from "@/server/auth/request";
-import { getCompanySettings } from "@/server/company/queries";
+import { getCompanySettings, hasPayslipTemplate } from "@/server/company/queries";
 
 export default async function CompanySettingsPage() {
   await requireRole(["SUPER_ADMIN"]);
-  const [csrf, company] = await Promise.all([csrfTokenFromRequest(), getCompanySettings()]);
+  const [csrf, company, template] = await Promise.all([
+    csrfTokenFromRequest(),
+    getCompanySettings(),
+    hasPayslipTemplate(),
+  ]);
 
   return (
     <section className="max-w-3xl rounded-[10px] border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
@@ -25,6 +30,7 @@ export default async function CompanySettingsPage() {
           emailBodyTemplate: company?.emailBodyTemplate ?? "",
         }}
       />
+      <PayslipTemplateForm csrf={csrf} hasTemplate={template} />
     </section>
   );
 }

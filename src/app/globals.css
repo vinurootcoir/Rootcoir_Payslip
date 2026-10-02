@@ -63,3 +63,12 @@ body {
   color: var(--text);
   font-family: var(--font-inter), sans-serif;
 }
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
