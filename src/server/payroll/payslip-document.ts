@@ -1,5 +1,5 @@
 import { formatDisplayDate, formatPayrollMonth, parseIsoDate } from "@/lib/dates";
-import { formatMoney, toDays } from "@/lib/money";
+import { formatMoney, sumMoney, toDays, toMoney } from "@/lib/money";
 import type { PayslipSnapshot } from "./snapshot";
 
 export type PayslipPdfMeta = {
@@ -16,6 +16,31 @@ export type PayslipBlock =
   | { kind: "paragraphs"; title: string; paragraphs: string[] }
   | { kind: "rows"; title: string; rows: PayslipRow[] };
 
+export type SalarySlipFields = {
+  salaryMonth: string;
+  employeeName: string;
+  employeeNumber: string;
+  designation: string;
+  department: string;
+  payPeriod: string;
+  paidDays: string;
+  lopDays: string;
+  paymentStatus: string;
+  basic: string;
+  hra: string;
+  conveyance: string;
+  special: string;
+  gross: string;
+  epf: string;
+  esi: string;
+  professionalTax: string;
+  otherDeductions: string;
+  totalDeductions: string;
+  net: string;
+  amountInWords: string;
+  voidNote: string | null;
+};
+
 export type PayslipDocument = {
   filename: string;
   companyName: string;
@@ -25,7 +50,24 @@ export type PayslipDocument = {
   notice: string | null;
   blocks: PayslipBlock[];
   disclaimer: string;
+  slip: SalarySlipFields;
 };
+
+function inr(value: Parameters<typeof toMoney>[0]): string {
+  return new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(toMoney(value).toFixed(2)));
+}
+
+function dayLabel(value: string): string {
+  try {
+    const parsed = toDays(value);
+    return parsed.isInteger() ? parsed.toFixed(0) : parsed.toFixed(2);
+  } catch {
+    return value;
+  }
+}
 
 function text(value: string | null | undefined): string | null {
   if (value == null) return null;
@@ -60,6 +102,62 @@ function row(label: string, value: string | null): PayslipRow | null {
 
 function rows(entries: Array<PayslipRow | null>): PayslipRow[] {
   return entries.filter((entry): entry is PayslipRow => entry !== null);
+}
+
+export function salarySlipFields(input: {
+  year: number;
+  month: number;
+  status: "DRAFT" | "FINALIZED" | "VOID";
+  voidReason: string | null;
+  employeeName: string;
+  employeeNumber: string;
+  designation: string;
+  department: string;
+  paidDays: string;
+  lopDays: string;
+  basic: string;
+  hra: string;
+  specialAllowance: string;
+  otherAllowances: string;
+  overtime: string | null;
+  bonus: string | null;
+  gross: string;
+  employeePf: string | null;
+  employeeEsi: string | null;
+  professionalTax: string | null;
+  tds: string | null;
+  salaryAdvance: string | null;
+  otherDeductions: string | null;
+  totalDeductions: string;
+  net: string;
+  amountInWords: string | null;
+}): SalarySlipFields {
+  const reason = text(input.voidReason);
+  const monthLabel = formatPayrollMonth(input.year, input.month);
+  return {
+    salaryMonth: monthLabel,
+    employeeName: text(input.employeeName) ?? "",
+    employeeNumber: text(input.employeeNumber) ?? "",
+    designation: text(input.designation) ?? "",
+    department: text(input.department) ?? "",
+    payPeriod: monthLabel,
+    paidDays: dayLabel(input.paidDays),
+    lopDays: dayLabel(input.lopDays),
+    paymentStatus: input.status === "VOID" ? "Void" : input.status === "DRAFT" ? "Draft" : "Finalized",
+    basic: inr(input.basic),
+    hra: inr(input.hra),
+    conveyance: inr(input.otherAllowances),
+    special: inr(sumMoney([input.specialAllowance, input.overtime ?? 0, input.bonus ?? 0])),
+    gross: inr(input.gross),
+    epf: inr(input.employeePf ?? 0),
+    esi: inr(input.employeeEsi ?? 0),
+    professionalTax: inr(input.professionalTax ?? 0),
+    otherDeductions: inr(sumMoney([input.tds ?? 0, input.salaryAdvance ?? 0, input.otherDeductions ?? 0])),
+    totalDeductions: inr(input.totalDeductions),
+    net: inr(input.net),
+    amountInWords: text(input.amountInWords) ?? "",
+    voidNote: input.status === "VOID" ? reason ?? "This payslip was voided." : null,
+  };
 }
 
 export function pdfFilename(payslipNumber: string): string {
@@ -157,6 +255,34 @@ export function buildPayslipDocument(snapshot: PayslipSnapshot, meta: PayslipPdf
   }
 
   const reason = text(meta.voidReason);
+  const slip = salarySlipFields({
+    year: meta.year,
+    month: meta.month,
+    status: meta.status,
+    voidReason: meta.voidReason,
+    employeeName,
+    employeeNumber: snapshot.employee.employeeNumber,
+    designation: snapshot.employee.designation,
+    department: snapshot.employee.department,
+    paidDays: snapshot.attendance.paidDays,
+    lopDays: snapshot.attendance.lopDays,
+    basic: snapshot.earnings.basicSalary,
+    hra: snapshot.earnings.hra,
+    specialAllowance: snapshot.earnings.specialAllowance,
+    otherAllowances: snapshot.earnings.otherAllowances,
+    overtime: snapshot.earnings.overtime,
+    bonus: snapshot.earnings.bonus,
+    gross: snapshot.earnings.grossEarnings,
+    employeePf: snapshot.deductions.employeePf,
+    employeeEsi: snapshot.deductions.employeeEsi,
+    professionalTax: snapshot.deductions.professionalTax,
+    tds: snapshot.deductions.tds,
+    salaryAdvance: snapshot.deductions.salaryAdvance,
+    otherDeductions: snapshot.deductions.otherDeductions,
+    totalDeductions: snapshot.deductions.totalDeductions,
+    net: snapshot.netPay,
+    amountInWords: snapshot.amountInWords,
+  });
   return {
     filename: pdfFilename(snapshot.payslipNumber),
     companyName,
@@ -170,5 +296,6 @@ export function buildPayslipDocument(snapshot: PayslipSnapshot, meta: PayslipPdf
     blocks,
     disclaimer:
       "Figures are the amounts recorded when this payslip was finalized. Statutory contributions are not calculated by this document.",
+    slip,
   };
 }

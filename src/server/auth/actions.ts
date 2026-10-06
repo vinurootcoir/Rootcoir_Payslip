@@ -15,7 +15,7 @@ import {
   recordLoginAttempt,
   recordPasswordChangeAttempt,
 } from "./rate-limit";
-import { clearSessionCookie, createSession, getCurrentUser, revokeSession } from "./session";
+import { clearSessionCookie, createSession, forgetCachedUser, getCurrentUser, revokeSession } from "./session";
 
 export type FormState = { error: string | null };
 
@@ -189,6 +189,7 @@ export async function changePassword(
         },
       }),
     ]);
+    forgetCachedUser(user.id);
   } catch (error) {
     unstable_rethrow(error);
     logFailure("auth.password", error);

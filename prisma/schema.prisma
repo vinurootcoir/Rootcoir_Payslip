@@ -135,7 +135,6 @@ model CompanySettings {
   includeOvertime      Boolean  @default(false) @map("include_overtime")
   emailSubjectTemplate String   @default("") @map("email_subject_template")
   emailBodyTemplate    String   @default("") @map("email_body_template") @db.Text
-  payslipTemplate      Bytes?   @map("payslip_template")
   updatedAt            DateTime @updatedAt @map("updated_at")
   updatedById          String?  @map("updated_by_id") @db.Uuid
 

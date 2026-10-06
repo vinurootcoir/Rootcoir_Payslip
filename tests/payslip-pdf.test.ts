@@ -158,7 +158,7 @@ test("pdf filename strips characters that are unsafe in a download name", () => 
   assert.equal(pdfFilename("PS/2026 04"), "PS202604.pdf");
 });
 
-test("a normal payslip fits on one page and a long address continues", async () => {
+test("a payslip stays on the salary slip page", async () => {
   const short = await renderPayslipPdf(
     buildPayslipDocument(snapshot(), {
       year: 2026,
@@ -182,7 +182,7 @@ test("a normal payslip fits on one page and a long address continues", async () 
     ),
   );
   assert.equal(long.bytes.subarray(0, 5).toString(), "%PDF-");
-  assert.ok(long.pageCount > 1);
+  assert.equal(long.pageCount, 1);
 });
 
 test("pdf download is limited to staff or the owning employee, and never a draft", () => {

@@ -102,7 +102,7 @@ export function createPrismaEmailAdapter(db: PrismaClient): EmailQueueAdapter {
       }
       const company = await db.companySettings.findUnique({
         where: { id: 1 },
-        select: { emailSubjectTemplate: true, emailBodyTemplate: true, payslipTemplate: true },
+        select: { emailSubjectTemplate: true, emailBodyTemplate: true },
       });
       const rendered = renderPayslipEmail({
         subjectTemplate: company?.emailSubjectTemplate ?? "",
@@ -112,9 +112,6 @@ export function createPrismaEmailAdapter(db: PrismaClient): EmailQueueAdapter {
         payrollMonth: formatPayrollMonth(record.payrollPeriod.year, record.payrollPeriod.month),
         payslipNumber: snapshot.payslipNumber,
       });
-      const template = company?.payslipTemplate && company.payslipTemplate.byteLength > 8
-        ? new Uint8Array(company.payslipTemplate)
-        : null;
       const pdf = await renderPayslipPdf(
         buildPayslipDocument(snapshot, {
           year: record.payrollPeriod.year,
@@ -123,7 +120,6 @@ export function createPrismaEmailAdapter(db: PrismaClient): EmailQueueAdapter {
           status: "FINALIZED",
           voidReason: null,
         }),
-        template,
       );
       return bindDeliveryMail(delivery, snapshot, pdf.bytes, rendered);
     },
