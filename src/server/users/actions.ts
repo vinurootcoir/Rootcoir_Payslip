@@ -10,6 +10,7 @@ import { isUuid } from "@/lib/ids";
 import { canChangeAccess, loginForNewUser } from "@/server/access/policy";
 import { writeAudit } from "@/server/auth/audit";
 import { requireRole } from "@/server/auth/guard";
+import { forgetCachedUser } from "@/server/auth/session";
 import { hashPassword } from "@/server/auth/password";
 import { mutationGuard } from "@/server/auth/request";
 import { getDb } from "@/server/db";
@@ -124,6 +125,7 @@ export async function updateUserAccess(_state: UserFormState, formData: FormData
         where: { userId: target.id, revokedAt: null },
         data: { revokedAt: new Date() },
       });
+      if (access.revokeSessions) forgetCachedUser(target.id);
       await tx.auditLog.create({
         data: {
           actorId: actor.id,

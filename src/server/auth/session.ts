@@ -36,6 +36,19 @@ export async function clearSessionCookie(): Promise<void> {
   });
 }
 
+const SESSION_CACHE_MS = 20_000;
+const sessionCache = new Map<string, { at: number; user: CurrentUser }>();
+
+export function forgetCachedSession(sessionId: string): void {
+  sessionCache.delete(sessionId);
+}
+
+export function forgetCachedUser(userId: string): void {
+  for (const [sessionId, entry] of sessionCache) {
+    if (entry.user.id === userId) sessionCache.delete(sessionId);
+  }
+}
+
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookieName())?.value;
@@ -43,6 +56,11 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   const claims = await readSessionToken(token);
   if (!claims) return null;
+
+  const cached = sessionCache.get(claims.sessionId);
+  if (cached && Date.now() - cached.at < SESSION_CACHE_MS && cached.user.id === claims.userId) {
+    return cached.user;
+  }
 
   const session = await getDb().session.findUnique({
     where: { id: claims.sessionId },
@@ -63,20 +81,29 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     },
   });
 
-  if (!session || session.revokedAt || session.expiresAt <= new Date()) return null;
+  if (!session || session.revokedAt || session.expiresAt <= new Date()) {
+    sessionCache.delete(claims.sessionId);
+    return null;
+  }
   if (session.userId !== claims.userId || session.user.id !== claims.userId) return null;
-  if (session.user.status !== "ACTIVE") return null;
+  if (session.user.status !== "ACTIVE") {
+    sessionCache.delete(claims.sessionId);
+    return null;
+  }
 
-  return {
+  const user: CurrentUser = {
     id: session.user.id,
     email: session.user.email,
     role: session.user.role,
     employeeId: session.user.employeeId,
     sessionId: session.id,
   };
+  sessionCache.set(session.id, { at: Date.now(), user });
+  return user;
 });
 
 export async function revokeSession(sessionId: string): Promise<void> {
+  forgetCachedSession(sessionId);
   await getDb().session.updateMany({
     where: { id: sessionId, revokedAt: null },
     data: { revokedAt: new Date() },
@@ -84,6 +111,7 @@ export async function revokeSession(sessionId: string): Promise<void> {
 }
 
 export async function revokeUserSessions(userId: string): Promise<void> {
+  forgetCachedUser(userId);
   await getDb().session.updateMany({
     where: { userId, revokedAt: null },
     data: { revokedAt: new Date() },

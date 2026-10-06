@@ -68,7 +68,7 @@ export function SidebarPanel({
     <>
       <div className="flex items-start">
         <Link href="/" onClick={onNavigate} className="mx-3 mt-4 min-w-0 flex-1 rounded-[8px] bg-logo-plate px-2 py-2">
-          <Image src="/rootcoir.png" alt="Root Coir" width={1600} height={364} className="h-auto w-full" />
+          <Image src="/rootcoir.png" alt="Root Coir" width={1600} height={364} priority className="h-auto w-full" />
         </Link>
         {headerAction}
       </div>

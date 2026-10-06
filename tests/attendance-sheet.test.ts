@@ -30,12 +30,7 @@ test("attendance rejects days that overflow and formulas", async () => {
   assert.equal(parsed.errors.some((issue) => issue.message.includes("formula")), true);
 });
 
-const png = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-  "base64",
-);
-
-test("a payslip can be drawn on a png template", async () => {
+test("a payslip is drawn on the salary slip template", async () => {
   const snapshot: PayslipSnapshot = {
     version: 1,
     company: { name: "Root Coir", address: "Kerala", currency: "INR" },
@@ -74,7 +69,6 @@ test("a payslip can be drawn on a png template", async () => {
   };
   const rendered = await renderPayslipPdf(
     buildPayslipDocument(snapshot, { year: 2026, month: 4, revision: 1, status: "FINALIZED", voidReason: null }),
-    png,
   );
   assert.equal(rendered.pageCount >= 1, true);
   assert.equal(rendered.bytes.subarray(0, 4).toString(), "%PDF");

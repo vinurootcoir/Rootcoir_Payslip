@@ -1,130 +1,103 @@
-import { existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import PDFDocument from "pdfkit";
-import type { PayslipDocument, PayslipRow } from "./payslip-document";
-
-const margin = 40;
-const ink = "#2c201c";
-const muted = "#71594f";
-const accent = "#6e2140";
-const line = "#e2d2b8";
-const plate = "#fffbf3";
+import type { PayslipDocument } from "./payslip-document";
 
 const regularFont = path.join(process.cwd(), "assets", "fonts", "Inter-Regular.otf");
 const boldFont = path.join(process.cwd(), "assets", "fonts", "Inter-Bold.otf");
-const logoPath = path.join(process.cwd(), "public", "rootcoir.png");
+const templatePath = path.join(process.cwd(), "public", "template", "template.png");
+const templateWidth = 1414;
+const templateHeight = 2000;
 
-function contentWidth(doc: PDFKit.PDFDocument): number {
-  return doc.page.width - margin * 2;
+let templateBytes: Buffer | null = null;
+
+function templateImage(): Buffer {
+  if (!templateBytes) templateBytes = readFileSync(templatePath);
+  return templateBytes;
 }
 
-function ensure(doc: PDFKit.PDFDocument, height: number, document: PayslipDocument): void {
-  if (doc.y + height <= doc.page.height - margin) return;
-  doc.addPage();
-  doc.font("Inter").fontSize(9).fillColor(accent);
-  doc.text(`${document.payslipNumber} · ${document.employeeName}`, margin, margin, {
-    width: contentWidth(doc),
+function sx(doc: PDFKit.PDFDocument, px: number): number {
+  return (px / templateWidth) * doc.page.width;
+}
+
+function sy(doc: PDFKit.PDFDocument, py: number): number {
+  return (py / templateHeight) * doc.page.height;
+}
+
+function cell(
+  doc: PDFKit.PDFDocument,
+  value: string,
+  box: { x: number; y: number; w: number; h: number },
+  options: { align?: "left" | "right"; size?: number; bold?: boolean; color?: string } = {},
+): void {
+  if (!value) return;
+  const size = options.size ?? 9;
+  const top = sy(doc, box.y) + Math.max(0, (sy(doc, box.h) - size) / 2 - 1);
+  doc.font(options.bold ? "Inter-Bold" : "Inter").fontSize(size).fillColor(options.color ?? "#2c201c");
+  doc.text(value, sx(doc, box.x), top, {
+    width: sx(doc, box.w),
+    height: size + 3,
+    align: options.align ?? "left",
+    lineBreak: false,
+    ellipsis: true,
   });
-  doc.moveDown(0.6);
 }
 
-function writeParagraph(doc: PDFKit.PDFDocument, document: PayslipDocument, text: string, size: number, color: string): void {
-  doc.font("Inter").fontSize(size);
-  const height = doc.heightOfString(text, { width: contentWidth(doc) });
-  ensure(doc, height, document);
-  doc.fillColor(color).text(text, margin, doc.y, { width: contentWidth(doc) });
+function fillRect(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number, color: string): void {
+  doc.save();
+  doc.rect(sx(doc, x), sy(doc, y), sx(doc, w), sy(doc, h)).fill(color);
+  doc.restore();
 }
 
-function drawRows(doc: PDFKit.PDFDocument, document: PayslipDocument, rows: PayslipRow[]): void {
-  const width = contentWidth(doc);
-  for (const entry of rows) {
-    doc.font("Inter").fontSize(10);
-    const valueWidth = width - 190;
-    const stacked = doc.heightOfString(entry.value, { width: valueWidth }) > 28;
-    if (stacked) {
-      const blockHeight =
-        doc.heightOfString(entry.label, { width }) + doc.heightOfString(entry.value, { width }) + 8;
-      ensure(doc, blockHeight, document);
-      doc.fillColor(muted).text(entry.label, margin, doc.y, { width });
-      doc.font("Inter").fillColor(ink).text(entry.value, margin, doc.y, { width });
-      doc.moveDown(0.3);
-      continue;
-    }
-    const rowHeight = Math.max(
-      doc.heightOfString(entry.label, { width: 180 }),
-      doc.heightOfString(entry.value, { width: valueWidth }),
-    );
-    ensure(doc, rowHeight + 4, document);
-    const top = doc.y;
-    doc.fillColor(muted).text(entry.label, margin, top, { width: 180 });
-    doc.fillColor(ink).text(entry.value, margin + 190, top, { width: valueWidth, align: "right" });
-    doc.y = top + rowHeight + 4;
+function draw(doc: PDFKit.PDFDocument, document: PayslipDocument): void {
+  doc.image(templateImage(), 0, 0, { width: doc.page.width, height: doc.page.height });
+  const slip = document.slip;
+  const leftValue = { x: 314, w: 380, h: 60 };
+  const rightValue = { x: 946, w: 380, h: 60 };
+  const identity = [
+    { y: 421, left: slip.employeeName, right: slip.employeeNumber },
+    { y: 482, left: slip.designation, right: slip.department },
+    { y: 542, left: slip.payPeriod, right: slip.paidDays },
+    { y: 602, left: slip.lopDays, right: slip.paymentStatus },
+  ];
+  for (const row of identity) {
+    cell(doc, row.left, { ...leftValue, y: row.y });
+    cell(doc, row.right, { ...rightValue, y: row.y });
+  }
+  cell(doc, slip.salaryMonth, { x: 704, y: 308, w: 420, h: 28 }, { size: 9 });
+
+  const earnAmount = { x: 510, w: 168, h: 51 };
+  const deductAmount = { x: 1144, w: 168, h: 51 };
+  const moneyRows = [
+    { y: 803, earn: slip.basic, deduct: slip.epf },
+    { y: 855, earn: slip.hra, deduct: slip.esi },
+    { y: 907, earn: slip.conveyance, deduct: slip.professionalTax },
+    { y: 959, earn: slip.special, deduct: slip.otherDeductions },
+    { y: 1012, earn: slip.gross, deduct: slip.totalDeductions },
+  ];
+  for (const row of moneyRows) {
+    const bold = row.y === 1012;
+    cell(doc, row.earn, { ...earnAmount, y: row.y }, { align: "right", bold });
+    cell(doc, row.deduct, { ...deductAmount, y: row.y }, { align: "right", bold });
+  }
+
+  cell(doc, slip.net, { x: 1172, y: 1112, w: 155, h: 68 }, { align: "right", size: 11, bold: true, color: "#ffffff" });
+
+  fillRect(doc, 70, 1190, 1270, 52, "#ffffff");
+  doc.font("Inter").fontSize(8).fillColor("#2c201c");
+  doc.text(`Amount in words: ${slip.amountInWords}`, sx(doc, 91), sy(doc, 1206), {
+    width: sx(doc, 1240),
+    height: sy(doc, 36),
+  });
+
+  if (slip.voidNote) {
+    doc.font("Inter").fontSize(8).fillColor("#a93a3a");
+    doc.text(slip.voidNote, sx(doc, 91), sy(doc, 1472), { width: sx(doc, 1220) });
   }
 }
 
-function draw(doc: PDFKit.PDFDocument, document: PayslipDocument, template?: Uint8Array | null): void {
-  doc.font("Inter");
-  let placedTemplate = false;
-  if (template && template.length > 8) {
-    try {
-      doc.image(Buffer.from(template), 0, 0, {
-        fit: [doc.page.width, doc.page.height],
-        align: "center",
-        valign: "center",
-      });
-      doc.y = 96;
-      placedTemplate = true;
-    } catch {
-      placedTemplate = false;
-    }
-  }
-  if (!placedTemplate && existsSync(logoPath)) {
-    doc.save();
-    doc.roundedRect(margin, margin, 168, 42, 6).fill(plate);
-    doc.restore();
-    doc.image(logoPath, margin + 6, margin + 8, { fit: [156, 26] });
-    doc.y = margin + 52;
-  } else {
-    doc.y = margin;
-  }
-
-  if (document.companyName) {
-    doc.font("Inter-Bold").fontSize(16).fillColor(ink);
-    doc.text(document.companyName, margin, doc.y, { width: contentWidth(doc) });
-  }
-  for (const paragraph of document.companyAddress) {
-    writeParagraph(doc, document, paragraph, 10, muted);
-  }
-  doc.moveDown(0.4);
-  doc.moveTo(margin, doc.y).lineTo(margin + contentWidth(doc), doc.y).strokeColor(line).stroke();
-  doc.moveDown(0.6);
-  doc.font("Inter-Bold").fontSize(13).fillColor(accent).text("Payslip", margin, doc.y, { width: contentWidth(doc) });
-  if (document.notice) {
-    doc.moveDown(0.3);
-    writeParagraph(doc, document, document.notice, 10, "#a93a3a");
-  }
-  doc.moveDown(0.6);
-
-  for (const block of document.blocks) {
-    doc.font("Inter-Bold").fontSize(11);
-    ensure(doc, 18, document);
-    doc.fillColor(accent).text(block.title, margin, doc.y, { width: contentWidth(doc) });
-    doc.moveDown(0.3);
-    if (block.kind === "rows") drawRows(doc, document, block.rows);
-    else {
-      for (const paragraph of block.paragraphs) writeParagraph(doc, document, paragraph, 10, ink);
-    }
-    doc.moveDown(0.5);
-  }
-  doc.moveDown(0.2);
-  writeParagraph(doc, document, document.disclaimer, 8, muted);
-}
-
-export function renderPayslipPdf(
-  document: PayslipDocument,
-  template?: Uint8Array | null,
-): Promise<{ bytes: Buffer; pageCount: number }> {
-  const doc = new PDFDocument({ size: "A4", margin, bufferPages: true });
+export function renderPayslipPdf(document: PayslipDocument): Promise<{ bytes: Buffer; pageCount: number }> {
+  const doc = new PDFDocument({ size: "A4", margin: 0, bufferPages: true });
   doc.registerFont("Inter", regularFont);
   doc.registerFont("Inter-Bold", boldFont);
   const chunks: Buffer[] = [];
@@ -134,7 +107,7 @@ export function renderPayslipPdf(
     doc.on("end", () => {
       resolve({ bytes: Buffer.concat(chunks), pageCount });
     });
-    draw(doc, document, template);
+    draw(doc, document);
     const pageCount = doc.bufferedPageRange().count;
     doc.end();
   });
