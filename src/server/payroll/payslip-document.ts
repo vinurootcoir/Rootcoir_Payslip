@@ -104,6 +104,62 @@ function rows(entries: Array<PayslipRow | null>): PayslipRow[] {
   return entries.filter((entry): entry is PayslipRow => entry !== null);
 }
 
+export function salarySlipFields(input: {
+  year: number;
+  month: number;
+  status: "DRAFT" | "FINALIZED" | "VOID";
+  voidReason: string | null;
+  employeeName: string;
+  employeeNumber: string;
+  designation: string;
+  department: string;
+  paidDays: string;
+  lopDays: string;
+  basic: string;
+  hra: string;
+  specialAllowance: string;
+  otherAllowances: string;
+  overtime: string | null;
+  bonus: string | null;
+  gross: string;
+  employeePf: string | null;
+  employeeEsi: string | null;
+  professionalTax: string | null;
+  tds: string | null;
+  salaryAdvance: string | null;
+  otherDeductions: string | null;
+  totalDeductions: string;
+  net: string;
+  amountInWords: string | null;
+}): SalarySlipFields {
+  const reason = text(input.voidReason);
+  const monthLabel = formatPayrollMonth(input.year, input.month);
+  return {
+    salaryMonth: monthLabel,
+    employeeName: text(input.employeeName) ?? "",
+    employeeNumber: text(input.employeeNumber) ?? "",
+    designation: text(input.designation) ?? "",
+    department: text(input.department) ?? "",
+    payPeriod: monthLabel,
+    paidDays: dayLabel(input.paidDays),
+    lopDays: dayLabel(input.lopDays),
+    paymentStatus: input.status === "VOID" ? "Void" : input.status === "DRAFT" ? "Draft" : "Finalized",
+    basic: inr(input.basic),
+    hra: inr(input.hra),
+    conveyance: inr(input.otherAllowances),
+    special: inr(sumMoney([input.specialAllowance, input.overtime ?? 0, input.bonus ?? 0])),
+    gross: inr(input.gross),
+    epf: inr(input.employeePf ?? 0),
+    esi: inr(input.employeeEsi ?? 0),
+    professionalTax: inr(input.professionalTax ?? 0),
+    otherDeductions: inr(sumMoney([input.tds ?? 0, input.salaryAdvance ?? 0, input.otherDeductions ?? 0])),
+    totalDeductions: inr(input.totalDeductions),
+    net: inr(input.net),
+    amountInWords: text(input.amountInWords) ?? "",
+    voidNote: input.status === "VOID" ? reason ?? "This payslip was voided." : null,
+  };
+}
+
 export function pdfFilename(payslipNumber: string): string {
   const safe = payslipNumber.replace(/[^A-Za-z0-9_-]/g, "");
   return `${safe || "payslip"}.pdf`;
@@ -199,43 +255,34 @@ export function buildPayslipDocument(snapshot: PayslipSnapshot, meta: PayslipPdf
   }
 
   const reason = text(meta.voidReason);
-  const monthLabel = formatPayrollMonth(meta.year, meta.month);
-  const slip: SalarySlipFields = {
-    salaryMonth: monthLabel,
+  const slip = salarySlipFields({
+    year: meta.year,
+    month: meta.month,
+    status: meta.status,
+    voidReason: meta.voidReason,
     employeeName,
-    employeeNumber: text(snapshot.employee.employeeNumber) ?? "",
-    designation: text(snapshot.employee.designation) ?? "",
-    department: text(snapshot.employee.department) ?? "",
-    payPeriod: monthLabel,
-    paidDays: dayLabel(snapshot.attendance.paidDays),
-    lopDays: dayLabel(snapshot.attendance.lopDays),
-    paymentStatus: meta.status === "VOID" ? "Void" : "Finalized",
-    basic: inr(snapshot.earnings.basicSalary),
-    hra: inr(snapshot.earnings.hra),
-    conveyance: inr(snapshot.earnings.otherAllowances),
-    special: inr(
-      sumMoney([
-        snapshot.earnings.specialAllowance,
-        snapshot.earnings.overtime ?? 0,
-        snapshot.earnings.bonus ?? 0,
-      ]),
-    ),
-    gross: inr(snapshot.earnings.grossEarnings),
-    epf: inr(snapshot.deductions.employeePf ?? 0),
-    esi: inr(snapshot.deductions.employeeEsi ?? 0),
-    professionalTax: inr(snapshot.deductions.professionalTax ?? 0),
-    otherDeductions: inr(
-      sumMoney([
-        snapshot.deductions.tds ?? 0,
-        snapshot.deductions.salaryAdvance ?? 0,
-        snapshot.deductions.otherDeductions ?? 0,
-      ]),
-    ),
-    totalDeductions: inr(snapshot.deductions.totalDeductions),
-    net: inr(snapshot.netPay),
-    amountInWords: text(snapshot.amountInWords) ?? "",
-    voidNote: meta.status === "VOID" ? reason ?? "This payslip was voided." : null,
-  };
+    employeeNumber: snapshot.employee.employeeNumber,
+    designation: snapshot.employee.designation,
+    department: snapshot.employee.department,
+    paidDays: snapshot.attendance.paidDays,
+    lopDays: snapshot.attendance.lopDays,
+    basic: snapshot.earnings.basicSalary,
+    hra: snapshot.earnings.hra,
+    specialAllowance: snapshot.earnings.specialAllowance,
+    otherAllowances: snapshot.earnings.otherAllowances,
+    overtime: snapshot.earnings.overtime,
+    bonus: snapshot.earnings.bonus,
+    gross: snapshot.earnings.grossEarnings,
+    employeePf: snapshot.deductions.employeePf,
+    employeeEsi: snapshot.deductions.employeeEsi,
+    professionalTax: snapshot.deductions.professionalTax,
+    tds: snapshot.deductions.tds,
+    salaryAdvance: snapshot.deductions.salaryAdvance,
+    otherDeductions: snapshot.deductions.otherDeductions,
+    totalDeductions: snapshot.deductions.totalDeductions,
+    net: snapshot.netPay,
+    amountInWords: snapshot.amountInWords,
+  });
   return {
     filename: pdfFilename(snapshot.payslipNumber),
     companyName,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmForm } from "@/components/confirm-form";
 import { PayrollEntryForm } from "@/components/payroll-entry-form";
+import { SalarySlipPreview } from "@/components/salary-slip-preview";
 import { requireRole } from "@/server/auth/guard";
 import { csrfTokenFromRequest } from "@/server/auth/request";
 import { getCompanySettings } from "@/server/company/queries";
@@ -10,10 +11,10 @@ import { getRecordEmailState } from "@/server/email/queries";
 import { deliveryStatusLabel } from "@/server/email/labels";
 import { finalizeRevision, voidAndReissue } from "@/server/payroll/finalize";
 import { getPayrollRecord } from "@/server/payroll/queries";
+import { buildPayslipDocument, salarySlipFields } from "@/server/payroll/payslip-document";
 import { moneyInput } from "@/server/payroll/schema";
-import { readSnapshot, type PayslipSnapshot } from "@/server/payroll/snapshot";
+import { readSnapshot } from "@/server/payroll/snapshot";
 import { formatPayrollMonth } from "@/lib/dates";
-import { formatMoney } from "@/lib/money";
 import { isUuid } from "@/lib/ids";
 
 export default async function PayrollEntryPage({
@@ -34,6 +35,42 @@ export default async function PayrollEntryPage({
   const snapshot = readSnapshot(record.snapshot);
   const title = snapshot?.employee.fullName ?? record.employee.fullName;
   const month = formatPayrollMonth(record.payrollPeriod.year, record.payrollPeriod.month);
+  const slip = snapshot
+    ? buildPayslipDocument(snapshot, {
+        year: record.payrollPeriod.year,
+        month: record.payrollPeriod.month,
+        revision: record.revision,
+        status: record.status === "VOID" ? "VOID" : "FINALIZED",
+        voidReason: record.voidReason,
+      }).slip
+    : salarySlipFields({
+        year: record.payrollPeriod.year,
+        month: record.payrollPeriod.month,
+        status: "DRAFT",
+        voidReason: null,
+        employeeName: record.employee.fullName,
+        employeeNumber: record.employee.employeeNumber,
+        designation: record.employee.designation,
+        department: record.employee.department,
+        paidDays: record.paidDays.toString(),
+        lopDays: record.lopDays.toString(),
+        basic: record.basicSalary.toString(),
+        hra: record.hra.toString(),
+        specialAllowance: record.specialAllowance.toString(),
+        otherAllowances: record.otherAllowances.toString(),
+        overtime: record.overtime?.toString() ?? null,
+        bonus: record.bonus?.toString() ?? null,
+        gross: record.grossEarnings.toString(),
+        employeePf: record.employeePf?.toString() ?? null,
+        employeeEsi: record.employeeEsi?.toString() ?? null,
+        professionalTax: record.professionalTax?.toString() ?? null,
+        tds: record.tds?.toString() ?? null,
+        salaryAdvance: record.salaryAdvance?.toString() ?? null,
+        otherDeductions: record.otherDeductions?.toString() ?? null,
+        totalDeductions: record.totalDeductions.toString(),
+        net: record.netPay.toString(),
+        amountInWords: record.amountInWords,
+      });
 
   return (
     <div className="grid max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -53,7 +90,9 @@ export default async function PayrollEntryPage({
         ) : (
           <div className="mb-5" />
         )}
+        <SalarySlipPreview slip={slip} />
         {record.status === "DRAFT" ? (
+          <div className="mt-5">
           <PayrollEntryForm
             csrf={csrf}
             recordId={record.id}
@@ -77,19 +116,8 @@ export default async function PayrollEntryPage({
               otherDeductions: moneyInput(record.otherDeductions),
             }}
           />
-        ) : (
-          <FinalizedView
-            snapshot={snapshot}
-            currency={record.currency}
-            gross={record.grossEarnings.toString()}
-            deductions={record.totalDeductions.toString()}
-            net={record.netPay.toString()}
-            words={record.amountInWords}
-            designation={record.employee.designation}
-            department={record.employee.department}
-            voidReason={record.voidReason}
-          />
-        )}
+          </div>
+        ) : null}
       </section>
       <div className="flex flex-col gap-4">
         {snapshot && record.status !== "DRAFT" ? (
@@ -171,93 +199,6 @@ export default async function PayrollEntryPage({
           </p>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function FinalizedView({
-  snapshot,
-  currency,
-  gross,
-  deductions,
-  net,
-  words,
-  designation,
-  department,
-  voidReason,
-}: {
-  snapshot: PayslipSnapshot | null;
-  currency: string;
-  gross: string;
-  deductions: string;
-  net: string;
-  words: string | null;
-  designation: string;
-  department: string;
-  voidReason: string | null;
-}) {
-  const moneyCurrency = snapshot?.company.currency ?? currency;
-  const shownDesignation = snapshot?.employee.designation ?? designation;
-  const shownDepartment = snapshot?.employee.department ?? department;
-  const lines = snapshot
-    ? [
-        ["Total working days", snapshot.attendance.totalWorkingDays],
-        ["Paid days", snapshot.attendance.paidDays],
-        ["Absent / LOP days", snapshot.attendance.lopDays],
-        ...(snapshot.attendance.casualLeaveDays ? [["Casual leave", snapshot.attendance.casualLeaveDays] as const] : []),
-        ...(snapshot.attendance.sickLeaveDays ? [["Sick leave", snapshot.attendance.sickLeaveDays] as const] : []),
-        ["Basic salary", formatMoney(snapshot.earnings.basicSalary, moneyCurrency)],
-        ["HRA", formatMoney(snapshot.earnings.hra, moneyCurrency)],
-        ["Special allowance", formatMoney(snapshot.earnings.specialAllowance, moneyCurrency)],
-        ["Other allowances", formatMoney(snapshot.earnings.otherAllowances, moneyCurrency)],
-        ...(snapshot.earnings.overtime ? [["Overtime", formatMoney(snapshot.earnings.overtime, moneyCurrency)] as const] : []),
-        ...(snapshot.earnings.bonus ? [["Bonus / incentive", formatMoney(snapshot.earnings.bonus, moneyCurrency)] as const] : []),
-        ...(snapshot.deductions.employeePf ? [["Employee PF", formatMoney(snapshot.deductions.employeePf, moneyCurrency)] as const] : []),
-        ...(snapshot.deductions.employeeEsi ? [["Employee ESI", formatMoney(snapshot.deductions.employeeEsi, moneyCurrency)] as const] : []),
-        ...(snapshot.deductions.professionalTax ? [["Professional tax", formatMoney(snapshot.deductions.professionalTax, moneyCurrency)] as const] : []),
-        ...(snapshot.deductions.tds ? [["TDS", formatMoney(snapshot.deductions.tds, moneyCurrency)] as const] : []),
-        ...(snapshot.deductions.salaryAdvance ? [["Salary advance / loan", formatMoney(snapshot.deductions.salaryAdvance, moneyCurrency)] as const] : []),
-        ...(snapshot.deductions.otherDeductions ? [["Other deductions", formatMoney(snapshot.deductions.otherDeductions, moneyCurrency)] as const] : []),
-      ]
-    : [];
-
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-[13.5px] text-muted">{shownDesignation} · {shownDepartment}</p>
-      {snapshot ? (
-        <p className="text-[12.5px] text-muted">
-          {snapshot.company.name}
-          {snapshot.employee.pan ? ` · PAN ${snapshot.employee.pan}` : ""}
-          {snapshot.employee.uan ? ` · UAN ${snapshot.employee.uan}` : ""}
-          {snapshot.employee.esiNumber ? ` · ESI ${snapshot.employee.esiNumber}` : ""}
-        </p>
-      ) : null}
-      {voidReason ? <p className="rounded-[8px] bg-negative-soft px-3 py-2 text-[13px] text-negative">Voided: {voidReason}</p> : null}
-      {lines.length > 0 ? (
-        <dl className="grid gap-2 sm:grid-cols-2">
-          {lines.map(([label, value]) => (
-            <div key={label} className="flex items-baseline justify-between gap-3 border-b border-border-soft py-1.5">
-              <dt className="text-[12.5px] text-muted">{label}</dt>
-              <dd className="font-mono text-[12.5px] text-text">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
-      <dl className="grid gap-3 rounded-[10px] border border-border bg-surface-2 p-4 sm:grid-cols-3">
-        <div>
-          <dt className="text-[12px] text-muted">Gross earnings</dt>
-          <dd className="font-mono text-[18px] font-bold">{formatMoney(snapshot?.earnings.grossEarnings ?? gross, moneyCurrency)}</dd>
-        </div>
-        <div>
-          <dt className="text-[12px] text-muted">Total deductions</dt>
-          <dd className="font-mono text-[18px] font-bold">{formatMoney(snapshot?.deductions.totalDeductions ?? deductions, moneyCurrency)}</dd>
-        </div>
-        <div>
-          <dt className="text-[12px] text-muted">Net pay</dt>
-          <dd className="font-mono text-[18px] font-bold">{formatMoney(snapshot?.netPay ?? net, moneyCurrency)}</dd>
-        </div>
-        <p className="sm:col-span-3 text-[13px] text-muted">{snapshot?.amountInWords ?? words}</p>
-      </dl>
     </div>
   );
 }

@@ -64,7 +64,7 @@ function draw(doc: PDFKit.PDFDocument, document: PayslipDocument): void {
     cell(doc, row.left, { ...leftValue, y: row.y });
     cell(doc, row.right, { ...rightValue, y: row.y });
   }
-  cell(doc, slip.salaryMonth, { x: 704, y: 308, w: 420, h: 28 }, { size: 9 });
+  cell(doc, slip.salaryMonth, { x: 730, y: 322, w: 400, h: 24 }, { size: 9 });
 
   const earnAmount = { x: 510, w: 168, h: 51 };
   const deductAmount = { x: 1144, w: 168, h: 51 };
