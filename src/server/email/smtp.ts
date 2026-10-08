@@ -8,6 +8,7 @@ export function createSmtpSender(config: SmtpConfig): MailSender {
     host: config.host,
     port: config.port,
     secure: config.secure,
+    requireTLS: !config.secure,
     auth: { user: config.user, pass: config.password },
   });
 
