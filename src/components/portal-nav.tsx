@@ -26,7 +26,7 @@ export function SidebarNav({
     <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
       {groups.map((group) => (
         <div key={group.label}>
-          <p className="px-2 pb-1 text-[11px] font-semibold text-nav-text">{group.label}</p>
+          <p className="px-2 pb-1 text-[11px] font-semibold text-faint">{group.label}</p>
           <div className="flex flex-col gap-0.5">
             {group.items.map((item) => {
               const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -35,9 +35,18 @@ export function SidebarNav({
                   key={item.href}
                   href={item.href}
                   onClick={onNavigate}
-                  className={`flex items-center gap-2 rounded-[7px] px-2 py-2 text-[13px] text-nav-text hover:text-nav-active ${active ? "bg-nav-hover" : "hover:bg-nav-hover"}`}
+                  className={`relative flex items-center gap-2 rounded-[7px] px-2 py-2 text-[13px] ${
+                    active
+                      ? "bg-nav-active-bg font-medium text-nav-active"
+                      : "text-nav-text hover:bg-nav-hover hover:text-heading"
+                  }`}
                 >
-                  <NavIcon name={item.icon} />
+                  {active ? (
+                    <span className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-r-full bg-nav-indicator" aria-hidden="true" />
+                  ) : null}
+                  <span className={active ? "text-accent" : "text-faint"}>
+                    <NavIcon name={item.icon} />
+                  </span>
                   {item.label}
                 </Link>
               );
@@ -73,12 +82,12 @@ export function SidebarPanel({
         {headerAction}
       </div>
       <SidebarNav groups={groups} onNavigate={onNavigate} />
-      <div className="border-t border-nav-hover px-4 py-3">
-        <p className="truncate text-[13px] font-medium text-nav-text">{email}</p>
-        <p className="text-[12px] text-nav-text">{role}</p>
+      <div className="border-t border-border-soft px-4 py-3">
+        <p className="truncate text-[13px] font-medium text-heading">{email}</p>
+        <p className="text-[12px] text-muted">{role}</p>
         <form action={logout} className="mt-2">
           <input type="hidden" name="csrf" value={csrf} />
-          <button type="submit" className="text-[12.5px] text-nav-text hover:text-nav-active">
+          <button type="submit" className="text-[12.5px] text-accent hover:text-accent-active">
             Sign out
           </button>
         </form>
@@ -121,12 +130,17 @@ export function MobileMenu({
   const drawer = open
     ? createPortal(
         <div className="fixed inset-0 z-40 md:hidden">
-          <button type="button" aria-label="Close menu" className="absolute inset-0 bg-nav/50" onClick={() => setOpenPath(null)} />
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="absolute inset-0 bg-[var(--overlay)]"
+            onClick={() => setOpenPath(null)}
+          />
           <aside
             role="dialog"
             aria-modal="true"
             aria-label="Menu"
-            className="absolute inset-y-0 left-0 flex w-[min(280px,88vw)] animate-[drawer-in_180ms_ease-out] flex-col bg-nav shadow-[var(--shadow-card)]"
+            className="absolute inset-y-0 left-0 flex w-[min(280px,88vw)] animate-[drawer-in_180ms_ease-out] flex-col border-r border-border-soft bg-nav shadow-[var(--shadow-modal)]"
           >
             <SidebarPanel
               groups={groups}
@@ -140,7 +154,7 @@ export function MobileMenu({
                   type="button"
                   aria-label="Close menu"
                   onClick={() => setOpenPath(null)}
-                  className="mr-3 mt-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-nav-text hover:bg-nav-hover hover:text-nav-active"
+                  className="mr-3 mt-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-muted hover:bg-nav-hover hover:text-heading"
                 >
                   <CloseIcon />
                 </button>
@@ -188,11 +202,11 @@ export function Breadcrumb() {
         <span key={`${part.label}-${index}`}>
           {index > 0 ? <span className="px-1.5 text-faint">/</span> : null}
           {part.href ? (
-            <Link href={part.href} className="hover:text-text">
+            <Link href={part.href} className="text-muted hover:text-heading hover:underline">
               {part.label}
             </Link>
           ) : (
-            <span className="text-text">{part.label}</span>
+            <span className="text-heading">{part.label}</span>
           )}
         </span>
       ))}
@@ -296,7 +310,7 @@ function EmployeeSearchField({ initialQuery }: { initialQuery: string }) {
               setOpen(false);
             }
           }}
-          className="w-full max-w-sm rounded-[8px] border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="w-full max-w-sm rounded-[8px] border border-border bg-surface px-3 py-2 text-[13px] text-text outline-none placeholder:text-disabled focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         />
       </form>
       {open && value.trim().length > 0 ? (
@@ -314,9 +328,9 @@ function EmployeeSearchField({ initialQuery }: { initialQuery: string }) {
                   type="button"
                   onMouseEnter={() => setActive(index)}
                   onClick={() => choose(employee)}
-                  className={`block w-full px-3 py-2 text-left ${index === active ? "bg-surface-2" : ""}`}
+                  className={`block w-full px-3 py-2 text-left hover:bg-surface-2 ${index === active ? "bg-accent-soft" : ""}`}
                 >
-                  <span className="block text-[13px] font-medium text-text">{employee.fullName}</span>
+                  <span className={`block text-[13px] font-medium ${index === active ? "text-accent" : "text-text"}`}>{employee.fullName}</span>
                   <span className="block font-mono text-[12px] text-muted">
                     {employee.employeeNumber} · {employee.department}
                   </span>

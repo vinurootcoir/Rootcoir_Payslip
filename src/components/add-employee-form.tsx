@@ -46,13 +46,17 @@ export function AddEmployeeForm({
           Added {state.added} {state.added === 1 ? "employee" : "employees"}.
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-1 rounded-[8px] bg-surface-2 p-1">
+      <div className="flex flex-wrap gap-1 rounded-[8px] border border-border-soft bg-surface p-1">
         {filters.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => setFilter(item.id)}
-            className={`rounded-[6px] px-2 py-1 text-[12px] ${filter === item.id ? "bg-surface font-medium text-text" : "text-muted"}`}
+            className={`rounded-[6px] px-2 py-1 text-[12px] ${
+              filter === item.id
+                ? "bg-accent-soft font-medium text-accent shadow-[inset_0_-2px_0_0_var(--nav-indicator)]"
+                : "text-faint hover:text-muted"
+            }`}
           >
             {item.label}
           </button>
@@ -108,7 +112,7 @@ export function AddEmployeeForm({
           name="mode"
           value="all-active"
           disabled={pending}
-          className="w-fit rounded-[8px] border border-border bg-surface px-4 py-2.5 text-[13.5px] font-medium text-text hover:bg-surface-2 disabled:opacity-60"
+          className="w-fit rounded-[8px] border border-border-accent bg-surface px-4 py-2.5 text-[13.5px] font-medium text-accent hover:bg-accent-soft disabled:opacity-60"
         >
           Add all active
         </button>

@@ -37,7 +37,7 @@ export default async function EmployeesPage({
             </p>
           ) : null}
         </div>
-        <div className="flex w-fit gap-1 rounded-[8px] bg-surface-2 p-1">
+        <div className="flex w-fit gap-1 rounded-[8px] border border-border-soft bg-surface p-1">
           {filters.map((filter) => {
             const active = query.status === filter.status;
             const href = employeeHref({ q: query.q, status: filter.status, page: 1 });
@@ -45,7 +45,11 @@ export default async function EmployeesPage({
               <Link
                 key={filter.label}
                 href={href}
-                className={`rounded-[6px] px-2.5 py-1 text-[12.5px] ${active ? "bg-surface font-medium text-text shadow-[var(--shadow-card)]" : "text-muted"}`}
+                className={`rounded-[6px] px-2.5 py-1 text-[12.5px] ${
+                  active
+                    ? "bg-accent-soft font-medium text-accent shadow-[inset_0_-2px_0_0_var(--nav-indicator)]"
+                    : "text-faint hover:text-muted"
+                }`}
               >
                 {filter.label}
               </Link>
@@ -61,7 +65,7 @@ export default async function EmployeesPage({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-left">
             <thead>
-              <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-faint">
+              <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-heading">
                 <th className="px-4 py-2 font-semibold">Employee</th>
                 <th className="px-4 py-2 font-semibold">Number</th>
                 <th className="px-4 py-2 font-semibold">Department</th>

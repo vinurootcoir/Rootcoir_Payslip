@@ -37,7 +37,7 @@ async function EmployeeHome({ current, year }: { current: CurrentUser; year: num
           <h1 className="text-[21px] font-bold tracking-[-0.02em]">Payslips</h1>
           <p className="text-[12.5px] text-muted">Finalized payslips for your employee record.</p>
         </div>
-        <div className="flex w-fit flex-wrap gap-1 rounded-[8px] bg-surface-2 p-1">
+        <div className="flex w-fit flex-wrap gap-1 rounded-[8px] border border-border-soft bg-surface p-1">
           <YearLink href="/" active={year === null} label="All" />
           {years.map((item) => (
             <YearLink key={item} href={`/?year=${item}`} active={year === item} label={String(item)} />
@@ -50,7 +50,7 @@ async function EmployeeHome({ current, year }: { current: CurrentUser; year: num
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-left">
             <thead>
-              <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-faint">
+              <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-heading">
                 <th className="px-4 py-2 font-semibold">Month</th>
                 <th className="px-4 py-2 font-semibold">Payslip</th>
                 <th className="px-4 py-2 font-semibold">Net pay</th>
@@ -93,7 +93,14 @@ async function EmployeeHome({ current, year }: { current: CurrentUser; year: num
 
 function YearLink({ href, active, label }: { href: string; active: boolean; label: string }) {
   return (
-    <Link href={href} className={`rounded-[6px] px-2.5 py-1 text-[12.5px] ${active ? "bg-surface font-medium text-text shadow-[var(--shadow-card)]" : "text-muted"}`}>
+    <Link
+      href={href}
+      className={`rounded-[6px] px-2.5 py-1 text-[12.5px] ${
+        active
+          ? "bg-accent-soft font-medium text-accent shadow-[inset_0_-2px_0_0_var(--nav-indicator)]"
+          : "text-faint hover:text-muted"
+      }`}
+    >
       {label}
     </Link>
   );
@@ -117,7 +124,7 @@ async function StaffHome({ current }: { current: CurrentUser }) {
           <Link href="/payroll" className="inline-flex rounded-[8px] bg-accent px-4 py-2.5 text-[13.5px] font-medium text-on-accent hover:bg-accent-hover">
             Payroll
           </Link>
-          <Link href="/employees" className="inline-flex rounded-[8px] border border-border bg-surface px-4 py-2.5 text-[13.5px] text-text hover:bg-surface-2">
+          <Link href="/employees" className="inline-flex rounded-[8px] border border-border-accent bg-surface px-4 py-2.5 text-[13.5px] font-medium text-accent hover:bg-accent-soft">
             Employees
           </Link>
         </div>
@@ -179,9 +186,9 @@ async function StaffHome({ current }: { current: CurrentUser }) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[8px] border border-border-soft px-3 py-2">
+    <div className="rounded-[8px] border border-border-soft bg-surface px-3 py-2">
       <dt className="text-[12px] text-muted">{label}</dt>
-      <dd className="font-mono text-[18px] font-bold">{value}</dd>
+      <dd className="font-mono text-[18px] font-bold text-heading">{value}</dd>
     </div>
   );
 }

@@ -39,11 +39,11 @@ export default async function PortalLayout({ children }: { children: ReactNode }
 
   return (
     <div className="flex min-h-full flex-1 bg-bg">
-      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col bg-nav md:flex">
+      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-border-soft bg-nav md:flex">
         <SidebarPanel groups={groups} email={current.email} role={roleLabel(current.role)} csrf={csrf} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border-soft bg-bg px-4 py-3 md:px-7">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border-soft bg-surface px-4 py-3 md:px-7">
           <MobileMenu groups={groups} email={current.email} role={roleLabel(current.role)} csrf={csrf} />
           <Breadcrumb />
           {isStaff ? (
@@ -56,7 +56,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
           {isStaff ? (
             <Link
               href="/employees/new"
-              className="shrink-0 rounded-[8px] bg-accent px-3 py-2 text-[13px] font-medium text-on-accent hover:bg-accent-hover"
+              className="shrink-0 rounded-[8px] bg-accent px-3 py-2 text-[13px] font-medium text-on-accent hover:bg-accent-hover active:bg-accent-active"
             >
               Add employee
             </Link>

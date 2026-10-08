@@ -1,31 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f7efe2;
-  --surface: #fffbf3;
-  --surface-2: #f1e5d2;
-  --border: #e2d2b8;
-  --border-soft: #ecdfc7;
-  --text: #2c201c;
-  --text-muted: #71594f;
-  --text-faint: #a18e7c;
-  --nav-bg: #2a1420;
-  --nav-bg-hover: #3b1e2e;
-  --nav-text: #ffffff;
-  --nav-text-active: #fbf0e6;
-  --accent: #6e2140;
-  --accent-soft: #f1dce2;
-  --accent-hover: #54172f;
+  /* RootCol light theme — earth brown + natural green + white */
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --surface-2: #faf6f1;
+  --section: #f7f8f4;
+  --border: #ddd5cc;
+  --border-soft: #ebe6e0;
+  --border-accent: #d9c4af;
+  --border-green: #cfe5b0;
+  --text: #2f241b;
+  --text-muted: #5f554d;
+  --text-faint: #857b72;
+  --text-disabled: #aaa39c;
+  --heading: #4f2e12;
+  --nav-bg: #ffffff;
+  --nav-bg-hover: #faf6f1;
+  --nav-bg-active: #f3e9de;
+  --nav-text: #5f554d;
+  --nav-text-active: #6b3f17;
+  --nav-indicator: #8bc53f;
+  --accent: #6b3f17;
+  --accent-soft: #f3e9de;
+  --accent-hover: #7d4b1d;
+  --accent-active: #4f2e12;
   --on-accent: #ffffff;
-  --positive: #4c6e45;
-  --positive-soft: #e7eedf;
-  --negative: #a93a3a;
-  --negative-soft: #f5ded9;
-  --warn: #a5722a;
-  --warn-soft: #f3e4c9;
-  --logo-plate: #fffbf3;
+  --positive: #5f8f27;
+  --positive-strong: #6fa52f;
+  --positive-soft: #eef7e2;
+  --growth: #8bc53f;
+  --growth-hover: #79b333;
+  --growth-soft: #f6faf0;
+  --negative: #a53e36;
+  --negative-soft: #f9e8e5;
+  --warn: #9a6a18;
+  --warn-soft: #fbf3dd;
+  --logo-plate: #ffffff;
+  --overlay: rgba(47, 36, 27, 0.35);
   --radius: 10px;
-  --shadow-card: 0 1px 2px rgba(60, 30, 20, 0.05);
+  --shadow-card: 0 2px 8px rgba(79, 46, 18, 0.08);
+  --shadow-modal: 0 12px 32px rgba(79, 46, 18, 0.14);
+  --focus-ring: 0 0 0 3px rgba(107, 63, 23, 0.12);
   color-scheme: light;
 }
 
@@ -33,21 +49,33 @@
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-section: var(--section);
   --color-border: var(--border);
   --color-border-soft: var(--border-soft);
+  --color-border-accent: var(--border-accent);
+  --color-border-green: var(--border-green);
   --color-text: var(--text);
   --color-muted: var(--text-muted);
   --color-faint: var(--text-faint);
+  --color-disabled: var(--text-disabled);
+  --color-heading: var(--heading);
   --color-nav: var(--nav-bg);
   --color-nav-hover: var(--nav-bg-hover);
+  --color-nav-active-bg: var(--nav-bg-active);
   --color-nav-text: var(--nav-text);
   --color-nav-active: var(--nav-text-active);
+  --color-nav-indicator: var(--nav-indicator);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
   --color-on-accent: var(--on-accent);
   --color-positive: var(--positive);
+  --color-positive-strong: var(--positive-strong);
   --color-positive-soft: var(--positive-soft);
+  --color-growth: var(--growth);
+  --color-growth-hover: var(--growth-hover);
+  --color-growth-soft: var(--growth-soft);
   --color-negative: var(--negative);
   --color-negative-soft: var(--negative-soft);
   --color-warn: var(--warn);
@@ -56,12 +84,28 @@
   --font-sans: var(--font-inter);
   --font-mono: var(--font-ibm-plex-mono);
   --shadow-card: var(--shadow-card);
+  --shadow-modal: var(--shadow-modal);
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-inter), sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--heading);
+}
+
+:focus-visible {
+  outline-color: var(--accent);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-disabled);
 }
 
 @keyframes drawer-in {

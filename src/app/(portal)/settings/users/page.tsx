@@ -21,7 +21,7 @@ export default async function UsersPage() {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-left">
           <thead>
-            <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-faint">
+            <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-heading">
               <th className="px-4 py-2 font-semibold">Email</th>
               <th className="px-4 py-2 font-semibold">Role</th>
               <th className="px-4 py-2 font-semibold">Status</th>
