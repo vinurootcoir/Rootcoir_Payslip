@@ -25,7 +25,7 @@ export default async function PayrollPeriodsPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] border-collapse text-left">
               <thead>
-                <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-faint">
+                <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-heading">
                   <th className="px-4 py-2 font-semibold">Month</th>
                   <th className="px-4 py-2 font-semibold">Payslips</th>
                   <th className="px-4 py-2 font-semibold">Status</th>

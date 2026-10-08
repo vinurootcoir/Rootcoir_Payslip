@@ -62,12 +62,16 @@ export default async function EmployeeDetailPage({
         </p>
         <p className="text-[13px] text-muted">{employee.workEmail}</p>
       </section>
-      <nav className="flex w-fit flex-wrap gap-1 rounded-[8px] bg-surface-2 p-1">
+      <nav className="flex w-fit flex-wrap gap-1 rounded-[8px] border border-border-soft bg-surface p-1">
         {tabs.map((item) => (
           <Link
             key={item.id}
             href={item.id === "profile" ? `/employees/${employee.id}` : `/employees/${employee.id}?tab=${item.id}`}
-            className={`rounded-[6px] px-3 py-1.5 text-[13px] ${tab === item.id ? "bg-surface font-medium text-text shadow-[var(--shadow-card)]" : "text-muted"}`}
+            className={`rounded-[6px] px-3 py-1.5 text-[13px] ${
+              tab === item.id
+                ? "bg-accent-soft font-medium text-accent shadow-[inset_0_-2px_0_0_var(--nav-indicator)]"
+                : "text-faint hover:text-muted"
+            }`}
           >
             {item.label}
           </Link>
@@ -156,7 +160,7 @@ export default async function EmployeeDetailPage({
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[520px] border-collapse text-left">
                 <thead>
-                  <tr className="border-y border-border-soft text-[11.5px] font-semibold text-faint">
+                  <tr className="border-y border-border-soft bg-surface-2 text-[11.5px] font-semibold text-heading">
                     <th className="px-2 py-2 font-semibold">Month</th>
                     <th className="px-2 py-2 font-semibold">Status</th>
                     <th className="px-2 py-2 font-semibold">Number</th>

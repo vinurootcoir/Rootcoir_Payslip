@@ -92,7 +92,7 @@ export function PayrollEntryForm({
           name="intent"
           value="preview"
           disabled={pending}
-          className="rounded-[8px] border border-border bg-surface px-4 py-2.5 text-[13.5px] text-text hover:bg-surface-2 disabled:opacity-60"
+          className="rounded-[8px] border border-border-accent bg-surface px-4 py-2.5 text-[13.5px] font-medium text-accent hover:bg-accent-soft disabled:opacity-60"
         >
           Preview
         </button>

@@ -19,7 +19,7 @@ export function StatusScreen({
           <Image src="/rootcoir.png" alt="Root Coir" width={1600} height={364} className="h-auto w-[220px]" />
         </div>
         <p className="font-mono text-[12px] font-medium tracking-[0.08em] text-faint">{code}</p>
-        <h1 className="mt-1 text-[21px] font-bold tracking-[-0.02em] text-text">{title}</h1>
+        <h1 className="mt-1 text-[21px] font-bold tracking-[-0.02em] text-heading">{title}</h1>
         <div className="mt-2 text-[13.5px] leading-5 text-muted">{children}</div>
         <div className="mt-5 flex flex-wrap gap-3">{actions}</div>
       </section>

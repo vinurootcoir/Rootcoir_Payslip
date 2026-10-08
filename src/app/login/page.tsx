@@ -24,7 +24,7 @@ export default async function LoginPage({
         <div className="mb-6 flex justify-center rounded-[10px] bg-logo-plate px-4 py-3">
           <Image src="/rootcoir.png" alt="Root Coir" width={1600} height={364} priority className="h-auto w-[220px]" />
         </div>
-        <h1 className="text-[21px] font-bold tracking-[-0.02em] text-text">Sign in</h1>
+        <h1 className="text-[21px] font-bold tracking-[-0.02em] text-heading">Sign in</h1>
         <p className="mt-1 mb-5 text-[13.5px] text-muted">Use your work email and password.</p>
         <LoginForm csrf={csrf} passwordChanged={params.changed === "1"} />
       </section>
