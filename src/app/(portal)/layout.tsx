@@ -39,7 +39,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
 
   return (
     <div className="flex min-h-full flex-1 bg-bg">
-      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-border-soft bg-nav md:flex">
+      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 flex-col border-r border-border-green bg-nav md:flex">
         <SidebarPanel groups={groups} email={current.email} role={roleLabel(current.role)} csrf={csrf} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">

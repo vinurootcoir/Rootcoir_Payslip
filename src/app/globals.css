@@ -15,12 +15,12 @@
   --text-faint: #857b72;
   --text-disabled: #aaa39c;
   --heading: #4f2e12;
-  --nav-bg: #ffffff;
-  --nav-bg-hover: #faf6f1;
-  --nav-bg-active: #f3e9de;
+  --nav-bg: #cfe8ae;
+  --nav-bg-hover: #bfe092;
+  --nav-bg-active: #b5db86;
   --nav-text: #5f554d;
   --nav-text-active: #6b3f17;
-  --nav-indicator: #8bc53f;
+  --nav-indicator: #6b3f17;
   --accent: #6b3f17;
   --accent-soft: #f3e9de;
   --accent-hover: #7d4b1d;
