@@ -2,27 +2,25 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { login, type FormState } from "@/server/auth/actions";
+import { requestPasswordReset, type FormState } from "@/server/auth/actions";
 import { executeRecaptcha, RecaptchaNotice, RecaptchaScript } from "./recaptcha";
 
-const initialState: FormState = { error: null };
+const initialState: FormState = { error: null, message: null };
 
-export function LoginForm({
+export function ForgotPasswordForm({
   csrf,
-  passwordChanged,
   siteKey,
 }: {
   csrf: string;
-  passwordChanged: boolean;
   siteKey: string | null;
 }) {
-  const [state, formAction, pending] = useActionState(login, initialState);
+  const [state, formAction, pending] = useActionState(requestPasswordReset, initialState);
   const [clientError, setClientError] = useState<string | null>(null);
 
   async function submit(formData: FormData) {
     setClientError(null);
     try {
-      formData.set("recaptchaToken", await executeRecaptcha(siteKey, "login"));
+      formData.set("recaptchaToken", await executeRecaptcha(siteKey, "forgot_password"));
     } catch (error) {
       setClientError(error instanceof Error ? error.message : "Security check failed.");
       return;
@@ -35,10 +33,8 @@ export function LoginForm({
       <RecaptchaScript siteKey={siteKey} />
       <form action={submit} className="flex flex-col gap-4">
         <input type="hidden" name="csrf" value={csrf} />
-        {passwordChanged ? (
-          <p className="rounded-[8px] bg-positive-soft px-3 py-2 text-[13px] text-positive">
-            Password updated. Sign in with the new password.
-          </p>
+        {state.message ? (
+          <p className="rounded-[8px] bg-positive-soft px-3 py-2 text-[13px] text-positive">{state.message}</p>
         ) : null}
         {state.error || clientError ? (
           <p role="alert" className="rounded-[8px] bg-negative-soft px-3 py-2 text-[13px] text-negative">
@@ -46,7 +42,7 @@ export function LoginForm({
           </p>
         ) : null}
         <label className="flex flex-col gap-1.5 text-[12.5px] font-medium text-muted">
-          Email
+          Work email
           <input
             name="email"
             type="email"
@@ -55,29 +51,19 @@ export function LoginForm({
             className="rounded-[8px] border border-border bg-surface px-3 py-2 text-[13.5px] font-normal text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           />
         </label>
-        <label className="flex flex-col gap-1.5 text-[12.5px] font-medium text-muted">
-          Password
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            className="rounded-[8px] border border-border bg-surface px-3 py-2 text-[13.5px] font-normal text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          />
-        </label>
-        <div className="flex justify-end">
-          <Link href="/forgot-password" className="text-[12.5px] font-medium text-accent hover:text-accent-hover">
-            Forgot password?
-          </Link>
-        </div>
         <button
           type="submit"
           disabled={pending}
           className="mt-1 rounded-[8px] bg-accent px-4 py-2.5 text-[13.5px] font-medium text-on-accent hover:bg-accent-hover disabled:opacity-60"
         >
-          {pending ? "Signing in..." : "Sign in"}
+          {pending ? "Sending..." : "Send reset link"}
         </button>
         <RecaptchaNotice />
+        <p className="text-center text-[12.5px] text-muted">
+          <Link href="/login" className="font-medium text-accent hover:text-accent-hover">
+            Back to sign in
+          </Link>
+        </p>
       </form>
     </>
   );

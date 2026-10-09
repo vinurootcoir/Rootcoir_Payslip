@@ -22,6 +22,8 @@ test("the content security policy stays on this origin", () => {
   assert.match(production["Content-Security-Policy"], /default-src 'self'/);
   assert.match(production["Content-Security-Policy"], /object-src 'none'/);
   assert.match(production["Content-Security-Policy"], /frame-ancestors 'none'/);
+  assert.match(production["Content-Security-Policy"], /https:\/\/www\.google\.com/);
+  assert.match(production["Content-Security-Policy"], /frame-src https:\/\/www\.google\.com/);
   assert.equal(production["Content-Security-Policy"].includes("'unsafe-eval'"), false);
   assert.equal(production["Strict-Transport-Security"], "max-age=63072000; includeSubDomains");
   assert.equal(production["X-Frame-Options"], "DENY");

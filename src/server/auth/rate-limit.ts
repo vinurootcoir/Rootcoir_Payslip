@@ -66,3 +66,23 @@ export async function recordPasswordChangeAttempt(userId: string): Promise<void>
   });
   await getDb().loginAttempt.create({ data: { identifier } });
 }
+
+export async function isPasswordResetRateLimited(email: string, ip: string): Promise<boolean> {
+  const since = new Date(Date.now() - WINDOW_MS);
+  if ((await countSince(digest("reset-email", email), since)) >= EMAIL_LIMIT) return true;
+  if (ip === "unknown") return false;
+  return (await countSince(digest("reset-ip", ip), since)) >= IP_LIMIT;
+}
+
+export async function recordPasswordResetAttempt(email: string, ip: string): Promise<void> {
+  const since = new Date(Date.now() - WINDOW_MS);
+  const identifiers = [digest("reset-email", email)];
+  if (ip !== "unknown") identifiers.push(digest("reset-ip", ip));
+
+  await getDb().loginAttempt.deleteMany({
+    where: { identifier: { in: identifiers }, createdAt: { lt: since } },
+  });
+  await getDb().loginAttempt.createMany({
+    data: identifiers.map((identifier) => ({ identifier })),
+  });
+}

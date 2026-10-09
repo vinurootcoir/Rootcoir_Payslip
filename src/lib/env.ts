@@ -53,6 +53,9 @@ const envSchema = z
       emptyToUndefined,
       z.enum(["true", "false"]).optional(),
     ),
+    // Names match the project's .env spelling.
+    GOOGLE_RECAPTCHE_SITEKEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+    GOOGLE_RECAPTCH_SECRETKEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   })
   .superRefine((data, ctx) => {
     const smtpKeys = [
@@ -75,6 +78,27 @@ const envSchema = z
             message: "SMTP setting is missing",
           });
         }
+      }
+    }
+
+    const siteKey = data.GOOGLE_RECAPTCHE_SITEKEY;
+    const secretKey = data.GOOGLE_RECAPTCH_SECRETKEY;
+    const anyRecaptcha = siteKey !== undefined || secretKey !== undefined;
+    const requireRecaptcha = data.NODE_ENV === "production" || anyRecaptcha;
+    if (requireRecaptcha) {
+      if (siteKey === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["GOOGLE_RECAPTCHE_SITEKEY"],
+          message: "reCAPTCHA site key is missing",
+        });
+      }
+      if (secretKey === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["GOOGLE_RECAPTCH_SECRETKEY"],
+          message: "reCAPTCHA secret key is missing",
+        });
       }
     }
 
@@ -122,6 +146,11 @@ export type SmtpConfig = {
   secure: boolean;
 };
 
+export type RecaptchaConfig = {
+  siteKey: string;
+  secretKey: string;
+};
+
 export type AppEnv = {
   nodeEnv: "development" | "test" | "production";
   databaseUrl: string;
@@ -129,6 +158,7 @@ export type AppEnv = {
   jwtSecret: string;
   jwtExpiry: string;
   smtp: SmtpConfig | null;
+  recaptcha: RecaptchaConfig | null;
 };
 
 export class EnvironmentConfigError extends Error {
@@ -174,6 +204,14 @@ export function getEnv(): AppEnv {
         }
       : null;
 
+  const recaptcha =
+    data.GOOGLE_RECAPTCHE_SITEKEY && data.GOOGLE_RECAPTCH_SECRETKEY
+      ? {
+          siteKey: data.GOOGLE_RECAPTCHE_SITEKEY,
+          secretKey: data.GOOGLE_RECAPTCH_SECRETKEY,
+        }
+      : null;
+
   cached = {
     nodeEnv: data.NODE_ENV,
     databaseUrl: data.DATABASE_URL,
@@ -181,6 +219,7 @@ export function getEnv(): AppEnv {
     jwtSecret: data.JWT_SECRET,
     jwtExpiry: data.JWT_EXPIRY,
     smtp,
+    recaptcha,
   };
   return cached;
 }

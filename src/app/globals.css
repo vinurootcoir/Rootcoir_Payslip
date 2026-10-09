@@ -116,3 +116,8 @@ textarea::placeholder {
     transform: translateX(0);
   }
 }
+
+/* Hide Google's floating badge; open auth forms show the required notice instead. */
+.grecaptcha-badge {
+  visibility: hidden !important;
+}
