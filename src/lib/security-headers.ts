@@ -1,6 +1,16 @@
 export function securityHeaders(production: boolean): { key: string; value: string }[] {
-  const scriptSrc = ["'self'", "'unsafe-inline'", ...(production ? [] : ["'unsafe-eval'"])];
-  const connectSrc = ["'self'", ...(production ? [] : ["ws:", "wss:"])];
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    "https://www.google.com",
+    "https://www.gstatic.com",
+    ...(production ? [] : ["'unsafe-eval'"]),
+  ];
+  const connectSrc = [
+    "'self'",
+    "https://www.google.com",
+    ...(production ? [] : ["ws:", "wss:"]),
+  ];
   const policy = [
     "default-src 'self'",
     `script-src ${scriptSrc.join(" ")}`,
@@ -8,6 +18,7 @@ export function securityHeaders(production: boolean): { key: string; value: stri
     "img-src 'self' data: blob:",
     "font-src 'self'",
     `connect-src ${connectSrc.join(" ")}`,
+    "frame-src https://www.google.com https://recaptcha.google.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

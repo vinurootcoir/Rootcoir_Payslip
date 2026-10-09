@@ -29,7 +29,12 @@ export function proxy(request: NextRequest) {
 
   const hasSession = request.cookies.has(sessionCookieName());
   const pathname = request.nextUrl.pathname;
-  const isPublic = pathname === "/login" || pathname === "/health" || pathname === "/health/ready";
+  const isPublic =
+    pathname === "/login" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
+    pathname === "/health" ||
+    pathname === "/health/ready";
   const response = !hasSession && !isPublic
     ? NextResponse.redirect(new URL("/login", request.url))
     : NextResponse.next({ request: { headers: requestHeaders } });
