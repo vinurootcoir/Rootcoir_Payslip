@@ -63,6 +63,42 @@ test("attendance overflow and a negative net are rejected before finalization", 
   assert.equal(negative.errors.includes("Net pay cannot be negative."), true);
 });
 
+test("LOP deducts one thirtieth of monthly salary per absent day", () => {
+  const result = calculatePayroll(
+    components({
+      basicSalary: new Decimal(20000),
+      hra: new Decimal(8000),
+      specialAllowance: new Decimal(2000),
+      paidDays: new Decimal(23),
+      lopDays: new Decimal(3),
+      totalWorkingDays: new Decimal(26),
+    }),
+  );
+  // Monthly salary 30000 → 30000/30 × 3 = 3000
+  assert.equal(result.monthlySalary.toFixed(2), "30000.00");
+  assert.equal(result.lopDeduction.toFixed(2), "3000.00");
+  assert.equal(result.grossEarnings.toFixed(2), "30000.00");
+  assert.equal(result.totalDeductions.toFixed(2), "3000.00");
+  assert.equal(result.netPay.toFixed(2), "27000.00");
+  assert.deepEqual(result.errors, []);
+});
+
+test("LOP ignores overtime and bonus when computing the daily rate", () => {
+  const result = calculatePayroll(
+    components({
+      basicSalary: new Decimal(30000),
+      overtime: new Decimal(3000),
+      bonus: new Decimal(1500),
+      lopDays: new Decimal(1),
+      paidDays: new Decimal(25),
+      totalWorkingDays: new Decimal(26),
+    }),
+  );
+  assert.equal(result.lopDeduction.toFixed(2), "1000.00");
+  assert.equal(result.grossEarnings.toFixed(2), "34500.00");
+  assert.equal(result.netPay.toFixed(2), "33500.00");
+});
+
 test("Indian amount in words uses crore and lakh", () => {
   assert.equal(
     amountInWords("1234567.5"),

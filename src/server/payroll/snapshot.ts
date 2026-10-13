@@ -37,6 +37,7 @@ export type PayslipSnapshot = {
     tds: string | null;
     salaryAdvance: string | null;
     otherDeductions: string | null;
+    lopDeduction?: string | null;
     totalDeductions: string;
   };
   netPay: string;
@@ -106,6 +107,7 @@ export function buildSnapshot(input: {
       tds: money(components.tds),
       salaryAdvance: money(components.salaryAdvance),
       otherDeductions: money(components.otherDeductions),
+      lopDeduction: totals.lopDeduction.isZero() ? null : totals.lopDeduction.toFixed(2),
       totalDeductions: totals.totalDeductions.toFixed(2),
     },
     netPay: totals.netPay.toFixed(2),
