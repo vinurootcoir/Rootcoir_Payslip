@@ -1,5 +1,7 @@
+import Decimal from "decimal.js";
 import { formatDisplayDate, formatPayrollMonth, parseIsoDate } from "@/lib/dates";
 import { formatMoney, sumMoney, toDays, toMoney } from "@/lib/money";
+import { lopDeductionAmount } from "./calculate";
 import type { PayslipSnapshot } from "./snapshot";
 
 export type PayslipPdfMeta = {
@@ -128,12 +130,23 @@ export function salarySlipFields(input: {
   tds: string | null;
   salaryAdvance: string | null;
   otherDeductions: string | null;
+  lopDeduction?: string | null;
   totalDeductions: string;
   net: string;
   amountInWords: string | null;
 }): SalarySlipFields {
   const reason = text(input.voidReason);
   const monthLabel = formatPayrollMonth(input.year, input.month);
+  const lop =
+    input.lopDeduction != null && input.lopDeduction !== ""
+      ? toMoney(input.lopDeduction)
+      : lopDeductionAmount({
+          basicSalary: new Decimal(input.basic),
+          hra: new Decimal(input.hra),
+          specialAllowance: new Decimal(input.specialAllowance),
+          otherAllowances: new Decimal(input.otherAllowances),
+          lopDays: new Decimal(input.lopDays),
+        });
   return {
     salaryMonth: monthLabel,
     employeeName: text(input.employeeName) ?? "",
@@ -152,7 +165,9 @@ export function salarySlipFields(input: {
     epf: inr(input.employeePf ?? 0),
     esi: inr(input.employeeEsi ?? 0),
     professionalTax: inr(input.professionalTax ?? 0),
-    otherDeductions: inr(sumMoney([input.tds ?? 0, input.salaryAdvance ?? 0, input.otherDeductions ?? 0])),
+    otherDeductions: inr(
+      sumMoney([input.tds ?? 0, input.salaryAdvance ?? 0, input.otherDeductions ?? 0, lop]),
+    ),
     totalDeductions: inr(input.totalDeductions),
     net: inr(input.net),
     amountInWords: text(input.amountInWords) ?? "",
@@ -235,6 +250,10 @@ export function buildPayslipDocument(snapshot: PayslipSnapshot, meta: PayslipPdf
         row("Professional tax", snapshot.deductions.professionalTax ? money(snapshot.deductions.professionalTax, currency) : null),
         row("TDS", snapshot.deductions.tds ? money(snapshot.deductions.tds, currency) : null),
         row("Salary advance / loan", snapshot.deductions.salaryAdvance ? money(snapshot.deductions.salaryAdvance, currency) : null),
+        row(
+          "LOP deduction",
+          snapshot.deductions.lopDeduction ? money(snapshot.deductions.lopDeduction, currency) : null,
+        ),
         row("Other deductions", snapshot.deductions.otherDeductions ? money(snapshot.deductions.otherDeductions, currency) : null),
         row("Total deductions", money(snapshot.deductions.totalDeductions, currency)),
       ]),
@@ -279,6 +298,7 @@ export function buildPayslipDocument(snapshot: PayslipSnapshot, meta: PayslipPdf
     tds: snapshot.deductions.tds,
     salaryAdvance: snapshot.deductions.salaryAdvance,
     otherDeductions: snapshot.deductions.otherDeductions,
+    lopDeduction: snapshot.deductions.lopDeduction ?? null,
     totalDeductions: snapshot.deductions.totalDeductions,
     net: snapshot.netPay,
     amountInWords: snapshot.amountInWords,

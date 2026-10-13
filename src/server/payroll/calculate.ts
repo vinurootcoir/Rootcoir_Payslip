@@ -2,6 +2,9 @@ import Decimal from "decimal.js";
 import { amountInWords } from "@/lib/amount-in-words";
 import { sumMoney, toDays, toMoney } from "@/lib/money";
 
+/** Calendar-month divisor for LOP: each absent day deducts 1/30 of monthly salary. */
+export const LOP_DAY_DIVISOR = 30;
+
 export type PayrollInput = {
   totalWorkingDays: Decimal;
   paidDays: Decimal;
@@ -21,6 +24,8 @@ export type PayrollInput = {
 };
 
 export type PayrollTotals = {
+  monthlySalary: Decimal;
+  lopDeduction: Decimal;
   grossEarnings: Decimal;
   totalDeductions: Decimal;
   netPay: Decimal;
@@ -32,7 +37,32 @@ function present(values: Array<Decimal | null>): Decimal[] {
   return values.filter((value): value is Decimal => value !== null);
 }
 
+/** Fixed monthly salary used for LOP (excludes overtime and bonus). */
+export function monthlySalaryTotal(input: Pick<
+  PayrollInput,
+  "basicSalary" | "hra" | "specialAllowance" | "otherAllowances"
+>): Decimal {
+  return sumMoney([
+    input.basicSalary,
+    input.hra,
+    input.specialAllowance,
+    input.otherAllowances,
+  ]);
+}
+
+/** LOP amount = monthly salary × lopDays / 30. */
+export function lopDeductionAmount(input: Pick<
+  PayrollInput,
+  "basicSalary" | "hra" | "specialAllowance" | "otherAllowances" | "lopDays"
+>): Decimal {
+  const days = toDays(input.lopDays);
+  if (days.isZero()) return toMoney(0);
+  return toMoney(monthlySalaryTotal(input).div(LOP_DAY_DIVISOR).times(days));
+}
+
 export function calculatePayroll(input: PayrollInput, currency = "INR"): PayrollTotals {
+  const monthlySalary = monthlySalaryTotal(input);
+  const lopDeduction = lopDeductionAmount(input);
   const grossEarnings = sumMoney(
     present([
       input.basicSalary,
@@ -51,6 +81,7 @@ export function calculatePayroll(input: PayrollInput, currency = "INR"): Payroll
       input.tds,
       input.salaryAdvance,
       input.otherDeductions,
+      lopDeduction.isZero() ? null : lopDeduction,
     ]),
   );
   const netPay = toMoney(grossEarnings.minus(totalDeductions));
@@ -62,6 +93,8 @@ export function calculatePayroll(input: PayrollInput, currency = "INR"): Payroll
     errors.push("Net pay cannot be negative.");
   }
   return {
+    monthlySalary,
+    lopDeduction,
     grossEarnings,
     totalDeductions,
     netPay,

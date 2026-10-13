@@ -48,3 +48,24 @@ test("monthly extras stay on the draft when salary is applied", () => {
   assert.equal(result.totalDeductions, "1000.00");
   assert.equal(result.netPay, "9500.00");
 });
+
+test("LOP days reduce net pay by one thirtieth of salary each", () => {
+  const result = payslipAmounts(
+    {
+      basicSalary: "20000",
+      hra: "8000",
+      specialAllowance: "2000",
+      otherAllowances: "0",
+      employeePf: "0",
+      employeeEsi: "0",
+      professionalTax: "0",
+      tds: "0",
+    },
+    "INR",
+    { totalWorkingDays: "26", paidDays: "24", lopDays: "2" },
+  );
+
+  assert.equal(result.grossEarnings, "30000.00");
+  assert.equal(result.totalDeductions, "2000.00");
+  assert.equal(result.netPay, "28000.00");
+});

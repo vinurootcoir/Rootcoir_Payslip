@@ -9,6 +9,7 @@ import { getCompanySettings } from "@/server/company/queries";
 import { queuePeriodEmails, resendPayslipEmail } from "@/server/email/actions";
 import { getRecordEmailState } from "@/server/email/queries";
 import { deliveryStatusLabel } from "@/server/email/labels";
+import { calculatePayroll } from "@/server/payroll/calculate";
 import { finalizeRevision, voidAndReissue } from "@/server/payroll/finalize";
 import { getPayrollRecord } from "@/server/payroll/queries";
 import { buildPayslipDocument, salarySlipFields } from "@/server/payroll/payslip-document";
@@ -35,6 +36,26 @@ export default async function PayrollEntryPage({
   const snapshot = readSnapshot(record.snapshot);
   const title = snapshot?.employee.fullName ?? record.employee.fullName;
   const month = formatPayrollMonth(record.payrollPeriod.year, record.payrollPeriod.month);
+  const draftTotals =
+    record.status === "DRAFT"
+      ? calculatePayroll({
+          totalWorkingDays: record.totalWorkingDays,
+          paidDays: record.paidDays,
+          lopDays: record.lopDays,
+          basicSalary: record.basicSalary,
+          hra: record.hra,
+          specialAllowance: record.specialAllowance,
+          otherAllowances: record.otherAllowances,
+          overtime: record.overtime,
+          bonus: record.bonus,
+          employeePf: record.employeePf,
+          employeeEsi: record.employeeEsi,
+          professionalTax: record.professionalTax,
+          tds: record.tds,
+          salaryAdvance: record.salaryAdvance,
+          otherDeductions: record.otherDeductions,
+        })
+      : null;
   const slip = snapshot
     ? buildPayslipDocument(snapshot, {
         year: record.payrollPeriod.year,
@@ -60,16 +81,19 @@ export default async function PayrollEntryPage({
         otherAllowances: record.otherAllowances.toString(),
         overtime: record.overtime?.toString() ?? null,
         bonus: record.bonus?.toString() ?? null,
-        gross: record.grossEarnings.toString(),
+        gross: (draftTotals?.grossEarnings ?? record.grossEarnings).toString(),
         employeePf: record.employeePf?.toString() ?? null,
         employeeEsi: record.employeeEsi?.toString() ?? null,
         professionalTax: record.professionalTax?.toString() ?? null,
         tds: record.tds?.toString() ?? null,
         salaryAdvance: record.salaryAdvance?.toString() ?? null,
         otherDeductions: record.otherDeductions?.toString() ?? null,
-        totalDeductions: record.totalDeductions.toString(),
-        net: record.netPay.toString(),
-        amountInWords: record.amountInWords,
+        lopDeduction: draftTotals?.lopDeduction.isZero()
+          ? null
+          : draftTotals?.lopDeduction.toFixed(2) ?? null,
+        totalDeductions: (draftTotals?.totalDeductions ?? record.totalDeductions).toString(),
+        net: (draftTotals?.netPay ?? record.netPay).toString(),
+        amountInWords: draftTotals?.amountInWords ?? record.amountInWords,
       });
 
   return (
